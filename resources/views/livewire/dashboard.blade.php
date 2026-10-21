@@ -1,4 +1,6 @@
 <div class="space-y-4">
+    <x-install-app />
+
     <section class="rounded-xl bg-emerald-700 p-5 text-white shadow-sm">
         <p class="text-sm text-emerald-100">Cần đóng (quá hạn và {{ \App\Livewire\Dashboard::DAYS_AHEAD }} ngày tới)</p>
         <p class="mt-1 text-3xl font-semibold">@money($totalConfirmed + $totalEstimated)</p>

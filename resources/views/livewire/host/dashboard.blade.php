@@ -1,4 +1,6 @@
 <div class="space-y-4">
+    <x-install-app />
+
     <section class="rounded-xl bg-emerald-700 p-5 text-white shadow-sm">
         <p class="text-sm text-emerald-100">Còn phải thu</p>
         <p class="mt-1 text-3xl font-semibold">@money($totals['toCollect'])</p>
