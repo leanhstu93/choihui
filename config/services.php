@@ -37,9 +37,10 @@ return [
         ],
     ],
 
-    // Google Analytics 4 (G-XXXXXXX). Để trống thì không nạp script (local, test).
+    // Google Analytics 4 (mã công khai, nằm sẵn trong HTML). Chỉ bật mặc định ở production
+    // để local / test không gửi số liệu ảo; GA_MEASUREMENT_ID ghi đè nếu cần.
     'google_analytics' => [
-        'measurement_id' => env('GA_MEASUREMENT_ID'),
+        'measurement_id' => env('GA_MEASUREMENT_ID', env('APP_ENV') === 'production' ? 'G-N77C3ZFV99' : null),
     ],
 
 ];
