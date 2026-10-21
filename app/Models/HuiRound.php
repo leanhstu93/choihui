@@ -25,12 +25,15 @@ use Illuminate\Support\Carbon;
  * @property int|null $bid_amount
  * @property WinnerType $winner_type
  * @property string|null $winner_slot_id
+ * @property string|null $winner_host_slot_id
  * @property string|null $winner_name
  * @property-read HuiGroup $group
  * @property-read MySlot|null $winnerSlot
+ * @property-read HostSlot|null $winnerHostSlot
  * @property-read Collection<int, CashEntry> $cashEntries
+ * @property-read Collection<int, HostEntry> $hostEntries
  */
-#[Fillable(['group_id', 'round_no', 'open_date', 'bid_amount', 'winner_type', 'winner_slot_id', 'winner_name'])]
+#[Fillable(['group_id', 'round_no', 'open_date', 'bid_amount', 'winner_type', 'winner_slot_id', 'winner_host_slot_id', 'winner_name'])]
 class HuiRound extends Model
 {
     /** @use HasFactory<HuiRoundFactory> */
@@ -80,5 +83,23 @@ class HuiRound extends Model
     public function cashEntries(): HasMany
     {
         return $this->hasMany(CashEntry::class, 'round_id');
+    }
+
+    /**
+     * Tay hốt kỳ này của dây chủ hụi.
+     *
+     * @return BelongsTo<HostSlot, $this>
+     */
+    public function winnerHostSlot(): BelongsTo
+    {
+        return $this->belongsTo(HostSlot::class, 'winner_host_slot_id');
+    }
+
+    /**
+     * @return HasMany<HostEntry, $this>
+     */
+    public function hostEntries(): HasMany
+    {
+        return $this->hasMany(HostEntry::class, 'round_id');
     }
 }

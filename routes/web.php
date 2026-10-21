@@ -23,14 +23,16 @@ Route::middleware('auth')->group(function () {
         Route::get('dashboard', Dashboard::class)->middleware('verified')->name('dashboard');
         Route::view('profile', 'profile')->name('profile');
 
-        Route::get('groups', GroupIndex::class)->name('groups.index');
-        Route::get('groups/create', GroupForm::class)->name('groups.create');
-        Route::get('groups/{group}', GroupShow::class)->name('groups.show');
-        Route::get('groups/{group}/edit', GroupForm::class)->name('groups.edit');
-        Route::get('groups/{group}/statement', GroupStatement::class)->name('groups.statement');
-        Route::get('rounds/{round}', RoundShow::class)->name('rounds.show');
+        Route::middleware('role:hui_vien')->group(function () {
+            Route::get('groups', GroupIndex::class)->name('groups.index');
+            Route::get('groups/create', GroupForm::class)->name('groups.create');
+            Route::get('groups/{group}', GroupShow::class)->name('groups.show');
+            Route::get('groups/{group}/edit', GroupForm::class)->name('groups.edit');
+            Route::get('groups/{group}/statement', GroupStatement::class)->name('groups.statement');
+            Route::get('rounds/{round}', RoundShow::class)->name('rounds.show');
 
-        Route::get('reports', ProfitReportPage::class)->name('reports');
+            Route::get('reports', ProfitReportPage::class)->name('reports');
+        });
         Route::get('settings', SettingsPage::class)->name('settings');
         Route::get('settings/backup', BackupDownloadController::class)->name('settings.backup');
     });

@@ -36,6 +36,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $note
  * @property-read Collection<int, MySlot> $slots
  * @property-read Collection<int, HuiRound> $rounds
+ * @property-read Collection<int, HostSlot> $hostSlots
  */
 #[Fillable([
     'name', 'type', 'frequency', 'face_value', 'total_slots', 'start_date', 'due_offset_days',
@@ -83,6 +84,16 @@ class HuiGroup extends Model
     public function slots(): HasMany
     {
         return $this->hasMany(MySlot::class, 'group_id');
+    }
+
+    /**
+     * N tay của dây chủ hụi, theo số thứ tự tay.
+     *
+     * @return HasMany<HostSlot, $this>
+     */
+    public function hostSlots(): HasMany
+    {
+        return $this->hasMany(HostSlot::class, 'group_id')->orderBy('slot_no');
     }
 
     /**

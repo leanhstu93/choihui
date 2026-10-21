@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Factories;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -33,6 +34,16 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];
+    }
+
+    /**
+     * Tài khoản chủ hụi (document/04-chu-hui.md).
+     */
+    public function host(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => UserRole::ChuHui,
+        ]);
     }
 
     /**

@@ -77,5 +77,6 @@ jobs:
             sleep 60
             cd ~/domains/madeby.io.vn/public_html
             composer2 install --no-dev --prefer-dist --optimize-autoloader --no-interaction
+            php artisan migrate --force
             php artisan optimize:clear
             php artisan optimize
