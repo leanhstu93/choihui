@@ -92,8 +92,8 @@ test('the form suggests face values and commissions used before, then common one
     $html = Livewire::test(GroupForm::class)->html();
     $suggested = fn (string $model): array => preg_match_all("/\\\$set\('{$model}', (\d+)\)/", $html, $matches) ? array_map('intval', $matches[1]) : [];
 
-    expect($suggested('faceValue'))->toBe([4_000_000, 1_000_000, 2_000_000, 3_000_000])
-        ->and($suggested('commissionAmount'))->toBe([300_000, 200_000, 500_000, 1_000_000]);
+    expect($suggested('faceValue'))->toBe([4_000_000, 1_000_000])
+        ->and($suggested('commissionAmount'))->toBe([300_000, 200_000]);
 
     Livewire::test(GroupForm::class, ['group' => $group])
         ->assertDontSeeHtml("\$set('faceValue'");

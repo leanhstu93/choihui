@@ -136,7 +136,7 @@ class GroupForm extends Component
 
     /**
      * Số tiền để bấm chọn nhanh: các số đã dùng ở dây gần đây trước, rồi đến số
-     * thường gặp; bỏ số 0 và số trùng, tối đa 4.
+     * thường gặp; bỏ số 0 và số trùng, tối đa 2.
      *
      * @param  list<int>  $usedAmounts
      * @param  list<int>  $defaultAmounts
@@ -146,7 +146,7 @@ class GroupForm extends Component
     {
         $amounts = array_unique(array_filter([...$usedAmounts, ...$defaultAmounts], fn (int $amount): bool => $amount > 0));
 
-        return array_slice(array_values($amounts), 0, 4);
+        return array_slice(array_values($amounts), 0, 2);
     }
 
     private function update(UpdateGroup $updateGroup, bool $confirmed): void

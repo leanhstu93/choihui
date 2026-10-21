@@ -177,7 +177,7 @@ class RoundShow extends Component
             ->sortByDesc('round_no')
             ->pluck('bid_amount')
             ->unique()
-            ->take(4)
+            ->take(2)
             ->values()
             ->all();
     }
