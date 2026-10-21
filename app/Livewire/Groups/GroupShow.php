@@ -114,8 +114,7 @@ class GroupShow extends Component
             'roundStates' => $this->group->rounds->mapWithKeys(fn (HuiRound $round) => [$round->id => $this->roundState($round)]),
             'totalPaid' => $summary['paid'],
             'totalReceived' => $summary['received'],
-            'profit' => $summary['profit'],
-            'ifWinNext' => $summary['ifWinNext'],
+            'outlook' => $summary['outlook'],
         ])->title($this->group->name);
     }
 

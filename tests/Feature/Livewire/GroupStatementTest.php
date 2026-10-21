@@ -23,7 +23,9 @@ test('the statement lists every round with my entries and the totals', function 
         ->assertSee('Tay 1 (hốt kỳ 2)')
         ->assertSeeInOrder(['Chị Lan', 'Tay 1: Đóng 1.000.000 đ', 'Đủ', 'Tay 2: Đóng 1.000.000 đ', 'Chưa'])
         ->assertSeeInOrder(['Tay 1: Nhận 1.900.000 đ', '(thực 1.500.000 đ)', 'Còn nợ'])
-        ->assertSeeInOrder(['Đã đóng', '1.000.000 đ', 'Đã nhận', '1.500.000 đ', 'Lời / lỗ', '500.000 đ'])
+        // Tay 1 hốt kỳ 2: nhận 1.900.000, đóng kỳ 1 và đóng chết kỳ 3 → −100.000.
+        // Tay 2 giả định hốt kỳ 3 (kỳ trống duy nhất): nhận 2.000.000, đóng 1.000.000 + 900.000 → +100.000.
+        ->assertSeeInOrder(['Đã đóng', '1.000.000 đ', 'Đã nhận', '1.500.000 đ', 'Nếu hốt kỳ 3', '0 đ', 'Nếu hốt kỳ cuối', '0 đ'])
         ->assertSee('so-hui-hui-1tr-co-hoa-'.now()->format('Y-m-d').'.png');
 });
 

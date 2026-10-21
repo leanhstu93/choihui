@@ -31,12 +31,12 @@ test('upcoming payments list unpaid entries and estimate rounds without a bid', 
 
     $payments = app(UpcomingPayments::class)->forUser($user, new DateTimeImmutable('2026-03-31'));
 
-    // Lãi trung bình (0 + 200.000) / 2 = 100.000; Tay 1 đã hốt kỳ 1 nên đóng đủ M.
+    // Kỳ 3 lấy lãi kỳ gần nhất (kỳ 2) 200.000; Tay 1 đã hốt kỳ 1 nên đóng đủ M.
     expect(describePayments($payments))->toBe([
         '1:Tay 2:1000000',
         '2:Tay 2:800000',
         '3:Tay 1:1000000:uoc-tinh',
-        '3:Tay 2:900000:uoc-tinh',
+        '3:Tay 2:800000:uoc-tinh',
     ]);
 });
 

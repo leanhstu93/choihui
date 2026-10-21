@@ -185,7 +185,7 @@ class RoundShow extends Component
     /**
      * Nếu một tay của mình hốt kỳ này với lãi thăm đang nhập: tiền nhận (đã trừ
      * thảo) và lời/lỗ dự kiến của tay đó khi dây chạy hết (kỳ chưa mở lấy lãi
-     * trung bình).
+     * kỳ gần nhất).
      *
      * @return array{payout: int, profit: int}|null
      */

@@ -47,23 +47,24 @@ test('profit is received minus paid, negative for a broken group (#7)', function
         ->and(HuiCalculator::profit(totalReceived: 8_300_000, totalPaid: 8_000_000))->toBe(300_000);
 });
 
-test('average bid only counts opened rounds and rounds to the nearest dong', function (array $bids, int $expected) {
-    expect(HuiCalculator::averageBid($bids))->toBe($expected);
+test('latest bid is the bid of the last opened round', function (array $bids, int $expected) {
+    expect(HuiCalculator::latestBid($bids))->toBe($expected);
 })->with([
     'no opened round' => [[1 => null, 2 => null], 0],
-    'ignores unopened rounds' => [[1 => 0, 2 => 200_000, 3 => null], 100_000],
-    'rounds half up' => [[1 => 1, 2 => 2], 2],
+    'ignores unopened rounds' => [[1 => 0, 2 => 200_000, 3 => null], 200_000],
+    'skips a round without a result' => [[1 => 300_000, 2 => null, 3 => 100_000, 4 => null], 100_000],
+    'a zero bid counts' => [[1 => 200_000, 2 => 0], 0],
 ]);
 
-test('projected profit fills unopened rounds with the average bid', function (int $winRoundNo, int $commission, int $expected) {
+test('projected profit fills unopened rounds with the latest bid', function (int $winRoundNo, int $commission, int $expected) {
     $bids = [1 => 0, 2 => 200_000, 3 => null, 4 => null];
 
     expect(HuiCalculator::projectedProfit(totalSlots: 4, faceValue: 1_000_000, commission: $commission, bidsByRound: $bids, winRoundNo: $winRoundNo))
         ->toBe($expected);
 })->with([
-    // Đóng 1.000.000 + 800.000 + 900.000, nhận 3.000.000.
-    'wins the last round' => [4, 0, 300_000],
-    'wins the last round with commission' => [4, 100_000, 200_000],
+    // Kỳ 3 lấy lãi kỳ 2 (200.000): đóng 1.000.000 + 800.000 + 800.000, nhận 3.000.000.
+    'wins the last round' => [4, 0, 400_000],
+    'wins the last round with commission' => [4, 100_000, 300_000],
     // Đóng 1.000.000 + 1.000.000 + 1.000.000, nhận 2.600.000.
     'won an opened round' => [2, 0, -400_000],
 ]);

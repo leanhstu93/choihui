@@ -27,7 +27,7 @@ test('recording a result where my slot wins creates the payout', function () {
         ->set('bidAmount', 100_000)
         ->set('winnerType', 'minh')
         ->assertSeeHtml('Dự kiến nhận: <strong>7.300.000 đ</strong>')
-        // Kỳ 1–2 lấy lãi trung bình 100.000: đóng 2 × 900.000, nhận 7.300.000, đóng chết kỳ 4–10 là 7 × 1.000.000.
+        // Kỳ 1–2 chưa nhập nên lấy lãi kỳ gần nhất (kỳ này) 100.000: đóng 2 × 900.000, nhận 7.300.000, đóng chết kỳ 4–10 là 7 × 1.000.000.
         ->assertSeeHtml('Lời / lỗ dự kiến: <strong class="text-red-700">-1.500.000 đ</strong>')
         ->set('winnerSlotId', $group->slots[0]->id)
         ->call('saveResult')

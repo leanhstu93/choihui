@@ -18,15 +18,18 @@ use InvalidArgumentException;
 /**
  * Báo cáo lời/lỗ từng dây và tổng (FR-10, document/01-dac-ta.md mục 5).
  *
- * Thực tế = tiền đã nhận − tiền đã đóng. Dự kiến (chỉ dây đang chạy) = tổng
- * projectedProfit của các tay, kỳ chưa mở lấy lãi trung bình, tay chưa hốt giả
- * định hốt các kỳ cuối còn trống. "Nếu hốt kỳ tới" (màn chi tiết dây) giống dự
- * kiến nhưng tay chưa hốt giả định hốt các kỳ còn trống sớm nhất.
+ * Mỗi dây có một con số lời/lỗ chính (outlook), giống nhau ở mọi màn hình:
+ * - Đang chạy, còn tay chưa hốt: "Nếu hốt kỳ k", tay chưa hốt giả định hốt các
+ *   kỳ còn trống sớm nhất.
+ * - Đang chạy, đã hốt hết: "Dự kiến mãn dây", tính cả các kỳ còn phải đóng chết.
+ * - Bể / kết thúc: thực tế = tiền đã nhận − tiền đã đóng.
+ * Kèm ifWinLast khi còn tay chưa hốt: giả định hốt các kỳ cuối còn trống.
+ * Kỳ chưa mở lấy lãi thăm của kỳ gần nhất đã mở.
  */
 final class ProfitReport
 {
     /**
-     * @return array{groups: list<array{group: HuiGroup, paid: int, received: int, profit: int, projected: int|null}>, totals: array{paid: int, received: int, profit: int, projected: int}}
+     * @return array{groups: list<array{group: HuiGroup, paid: int, received: int, profit: int, outlook: array{label: string, profit: int}, ifWinLast: int|null}>, totals: array{paid: int, received: int, outlook: int, ifWinLast: int}}
      */
     public function forUser(User $user): array
     {
@@ -43,15 +46,15 @@ final class ProfitReport
             ->get();
 
         $rows = [];
-        $totals = ['paid' => 0, 'received' => 0, 'profit' => 0, 'projected' => 0];
+        $totals = ['paid' => 0, 'received' => 0, 'outlook' => 0, 'ifWinLast' => 0];
 
         foreach ($groups as $group) {
             $row = $this->forGroup($group);
             $rows[] = $row;
             $totals['paid'] += $row['paid'];
             $totals['received'] += $row['received'];
-            $totals['profit'] += $row['profit'];
-            $totals['projected'] += $row['projected'] ?? $row['profit'];
+            $totals['outlook'] += $row['outlook']['profit'];
+            $totals['ifWinLast'] += $row['ifWinLast'] ?? $row['outlook']['profit'];
         }
 
         return ['groups' => $rows, 'totals' => $totals];
@@ -60,7 +63,7 @@ final class ProfitReport
     /**
      * Lời/lỗ của một dây. Dây phải có sẵn slots, rounds.cashEntries (nạp nếu thiếu).
      *
-     * @return array{group: HuiGroup, paid: int, received: int, profit: int, projected: int|null, ifWinNext: array{round_no: int, profit: int}|null}
+     * @return array{group: HuiGroup, paid: int, received: int, profit: int, outlook: array{label: string, profit: int}, ifWinLast: int|null}
      */
     public function forGroup(HuiGroup $group): array
     {
@@ -69,16 +72,29 @@ final class ProfitReport
         $entries = $group->rounds->flatMap(fn (HuiRound $round) => $round->cashEntries);
         $paid = (int) $entries->filter(fn (CashEntry $entry) => $entry->direction === CashDirection::Dong)->sum('amount_actual');
         $received = (int) $entries->filter(fn (CashEntry $entry) => $entry->direction === CashDirection::Nhan)->sum('amount_actual');
+        $profit = HuiCalculator::profit($received, $paid);
 
-        $isRunning = $group->status === HuiGroupStatus::DangChay;
+        $ifWinNext = null;
+        $ifWinLast = null;
+
+        if ($group->status === HuiGroupStatus::DangChay) {
+            $ifWinNext = $this->projectedProfit($group, winEarliest: true);
+            $ifWinLast = $this->projectedProfit($group, winEarliest: false)['profit'] ?? null;
+        }
+
+        $outlook = match (true) {
+            $ifWinNext !== null => ['label' => 'Nếu hốt kỳ '.$ifWinNext['round_no'], 'profit' => $ifWinNext['profit']],
+            $ifWinLast !== null => ['label' => 'Dự kiến mãn dây', 'profit' => $ifWinLast],
+            default => ['label' => 'Lời / lỗ', 'profit' => $profit],
+        };
 
         return [
             'group' => $group,
             'paid' => $paid,
             'received' => $received,
-            'profit' => HuiCalculator::profit($received, $paid),
-            'projected' => $isRunning ? $this->projectedProfit($group, winEarliest: false)['profit'] ?? null : null,
-            'ifWinNext' => $isRunning ? $this->projectedProfit($group, winEarliest: true) : null,
+            'profit' => $profit,
+            'outlook' => $outlook,
+            'ifWinLast' => $ifWinNext !== null ? $ifWinLast : null,
         ];
     }
 

@@ -72,11 +72,11 @@ final class HuiCalculator
     }
 
     /**
-     * Lãi thăm trung bình của các kỳ đã nhập lãi, làm tròn về đồng; 0 nếu chưa có kỳ nào.
+     * Lãi thăm của kỳ gần nhất đã nhập lãi (số kỳ lớn nhất); 0 nếu chưa có kỳ nào.
      *
      * @param  array<int, int|null>  $bidsByRound  round_no => lãi thăm (null = chưa mở)
      */
-    public static function averageBid(array $bidsByRound): int
+    public static function latestBid(array $bidsByRound): int
     {
         $openedBids = array_filter($bidsByRound, fn (?int $bid): bool => $bid !== null);
 
@@ -84,12 +84,12 @@ final class HuiCalculator
             return 0;
         }
 
-        return (int) round(array_sum($openedBids) / count($openedBids));
+        return $openedBids[max(array_keys($openedBids))];
     }
 
     /**
-     * Lời/lỗ dự kiến của một tay khi dây chạy hết: các kỳ chưa mở lấy lãi trung
-     * bình các kỳ đã mở.
+     * Lời/lỗ dự kiến của một tay khi dây chạy hết: các kỳ chưa mở lấy lãi thăm
+     * của kỳ gần nhất đã mở.
      *
      * @param  array<int, int|null>  $bidsByRound  round_no => lãi thăm (null = chưa mở)
      * @param  int  $winRoundNo  Kỳ tay này hốt (thực tế, hoặc giả định cho tay chưa hốt).
@@ -98,11 +98,11 @@ final class HuiCalculator
     {
         self::assertRound($winRoundNo, $totalSlots);
 
-        $averageBid = self::averageBid($bidsByRound);
+        $latestBid = self::latestBid($bidsByRound);
         $totalPaid = 0;
 
         for ($roundNo = 1; $roundNo <= $totalSlots; $roundNo++) {
-            $bid = $bidsByRound[$roundNo] ?? $averageBid;
+            $bid = $bidsByRound[$roundNo] ?? $latestBid;
 
             if ($roundNo === $winRoundNo) {
                 $received = self::netPayout($roundNo, $totalSlots, $faceValue, $bid, $commission);

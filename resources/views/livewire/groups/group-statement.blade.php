@@ -99,8 +99,8 @@
             <dl class="mt-4 grid grid-cols-4 gap-2 text-center text-sm">
                 <div class="rounded-lg bg-gray-50 p-2"><dt class="text-xs text-gray-500">Đã đóng</dt><dd class="font-semibold">@money($summary['paid'])</dd></div>
                 <div class="rounded-lg bg-gray-50 p-2"><dt class="text-xs text-gray-500">Đã nhận</dt><dd class="font-semibold">@money($summary['received'])</dd></div>
-                <div class="rounded-lg bg-gray-50 p-2"><dt class="text-xs text-gray-500">Lời / lỗ</dt><dd class="font-semibold {{ $profitClass($summary['profit']) }}">@money($summary['profit'])</dd></div>
-                <div class="rounded-lg bg-gray-50 p-2"><dt class="text-xs text-gray-500">Dự kiến mãn dây</dt><dd class="font-semibold">{{ $summary['projected'] === null ? '—' : number_format($summary['projected'], 0, ',', '.').' đ' }}</dd></div>
+                <div class="rounded-lg bg-gray-50 p-2"><dt class="text-xs text-gray-500">{{ $summary['outlook']['label'] }}</dt><dd class="font-semibold {{ $profitClass($summary['outlook']['profit']) }}">@money($summary['outlook']['profit'])</dd></div>
+                <div class="rounded-lg bg-gray-50 p-2"><dt class="text-xs text-gray-500">Nếu hốt kỳ cuối</dt><dd class="font-semibold {{ $summary['ifWinLast'] === null ? '' : $profitClass($summary['ifWinLast']) }}">{{ $summary['ifWinLast'] === null ? '—' : number_format($summary['ifWinLast'], 0, ',', '.').' đ' }}</dd></div>
             </dl>
         </article>
     </div>

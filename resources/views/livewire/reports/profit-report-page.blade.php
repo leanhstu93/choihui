@@ -8,12 +8,12 @@
     <section class="grid grid-cols-2 gap-2">
         <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Tổng đã đóng</div><div class="font-semibold">@money($totals['paid'])</div></div>
         <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Tổng đã nhận</div><div class="font-semibold">@money($totals['received'])</div></div>
-        <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Lời / lỗ thực tế</div><div class="font-semibold {{ $profitClass($totals['profit']) }}">@money($totals['profit'])</div></div>
-        <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Dự kiến khi mãn dây</div><div class="font-semibold {{ $profitClass($totals['projected']) }}">@money($totals['projected'])</div></div>
+        <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Lời / lỗ</div><div class="font-semibold {{ $profitClass($totals['outlook']) }}">@money($totals['outlook'])</div></div>
+        <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Nếu hốt kỳ cuối</div><div class="font-semibold {{ $profitClass($totals['ifWinLast']) }}">@money($totals['ifWinLast'])</div></div>
     </section>
 
     <p class="text-xs text-gray-500">
-        Thực tế = tiền đã nhận − tiền đã đóng. Dự kiến: kỳ chưa mở lấy lãi thăm trung bình các kỳ đã mở, tay chưa hốt giả định hốt ở các kỳ cuối còn trống. Dây bể và dây đã kết thúc chỉ tính thực tế.
+        Dây đang chạy còn tay chưa hốt: tính như hốt ở kỳ trống gần nhất (“Nếu hốt kỳ…”) và ở các kỳ cuối (“Nếu hốt kỳ cuối”). Đã hốt hết: dự kiến khi mãn dây, gồm cả các kỳ còn phải đóng. Kỳ chưa mở lấy lãi thăm của kỳ gần nhất. Dây bể hoặc đã kết thúc: tiền đã nhận − tiền đã đóng.
     </p>
 
     <section class="space-y-3">
@@ -26,9 +26,9 @@
                 <dl class="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
                     <dt class="text-gray-500">Đã đóng</dt><dd class="text-right">@money($row['paid'])</dd>
                     <dt class="text-gray-500">Đã nhận</dt><dd class="text-right">@money($row['received'])</dd>
-                    <dt class="text-gray-500">Thực tế</dt><dd class="text-right font-semibold {{ $profitClass($row['profit']) }}">@money($row['profit'])</dd>
-                    @if ($row['projected'] !== null)
-                        <dt class="text-gray-500">Dự kiến</dt><dd class="text-right font-semibold {{ $profitClass($row['projected']) }}">@money($row['projected'])</dd>
+                    <dt class="text-gray-500">{{ $row['outlook']['label'] }}</dt><dd class="text-right font-semibold {{ $profitClass($row['outlook']['profit']) }}">@money($row['outlook']['profit'])</dd>
+                    @if ($row['ifWinLast'] !== null)
+                        <dt class="text-gray-500">Nếu hốt kỳ cuối</dt><dd class="text-right font-semibold {{ $profitClass($row['ifWinLast']) }}">@money($row['ifWinLast'])</dd>
                     @endif
                 </dl>
             </a>

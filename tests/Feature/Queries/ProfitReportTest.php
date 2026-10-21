@@ -10,7 +10,7 @@ use App\Enums\WinnerType;
 use App\Models\User;
 use App\Queries\ProfitReport;
 
-test('the report shows actual and projected profit per group', function () {
+test('the report shows the profit if winning the next round and the last round', function () {
     $this->actingAs($user = User::factory()->create());
     $group = createHuiGroup(['total_slots' => 4, 'start_date' => '2026-01-05']);
     app(RecordRoundResult::class)->handle($group->rounds[0], 0, WinnerType::NguoiKhac);
@@ -20,9 +20,15 @@ test('the report shows actual and projected profit per group', function () {
 
     $report = app(ProfitReport::class)->forUser($user);
 
-    // Giống ví dụ HuiCalculatorTest: tay chưa hốt giả định hốt kỳ 4, dự kiến +300.000.
-    expect($report['groups'][0])->toMatchArray(['paid' => 1_800_000, 'received' => 0, 'profit' => -1_800_000, 'projected' => 300_000])
-        ->and($report['totals'])->toBe(['paid' => 1_800_000, 'received' => 0, 'profit' => -1_800_000, 'projected' => 300_000]);
+    // Kỳ chưa mở lấy lãi kỳ 2 (200.000). Hốt kỳ 3: nhận 2.800.000, đóng 1.000.000 + 800.000 và đóng chết kỳ 4 → 0.
+    // Hốt kỳ cuối giống ví dụ HuiCalculatorTest → +400.000.
+    expect($report['groups'][0])->toMatchArray([
+        'paid' => 1_800_000,
+        'received' => 0,
+        'profit' => -1_800_000,
+        'outlook' => ['label' => 'Nếu hốt kỳ 3', 'profit' => 0],
+        'ifWinLast' => 400_000,
+    ])->and($report['totals'])->toBe(['paid' => 1_800_000, 'received' => 0, 'outlook' => 0, 'ifWinLast' => 400_000]);
 });
 
 test('broken groups only report actual profit (#7)', function () {
@@ -36,9 +42,9 @@ test('broken groups only report actual profit (#7)', function () {
 
     $report = app(ProfitReport::class)->forUser($user);
 
-    expect($report['groups'][0]['profit'])->toBe(-4_500_000)
-        ->and($report['groups'][0]['projected'])->toBeNull()
-        ->and($report['totals']['projected'])->toBe(-4_500_000);
+    expect($report['groups'][0]['outlook'])->toBe(['label' => 'Lời / lỗ', 'profit' => -4_500_000])
+        ->and($report['groups'][0]['ifWinLast'])->toBeNull()
+        ->and($report['totals']['ifWinLast'])->toBe(-4_500_000);
 });
 
 test('received payouts count towards actual profit', function () {
@@ -60,13 +66,19 @@ test('an unwon slot shows the profit if it wins the next free round', function (
 
     // Hốt kỳ 7: nhận 6 × 1.000.000 + 5 × 900.000 − thảo 1.000.000 = 9.500.000,
     // đã đóng 6 × 900.000, còn đóng chết kỳ 8–12 là 5 × 1.000.000.
-    expect(app(ProfitReport::class)->forGroup($group)['ifWinNext'])->toBe(['round_no' => 7, 'profit' => -900_000]);
+    expect(app(ProfitReport::class)->forGroup($group)['outlook'])->toBe(['label' => 'Nếu hốt kỳ 7', 'profit' => -900_000]);
 });
 
-test('there is no next-round profit once every slot has won', function () {
+test('once every slot has won the remaining dead payments are counted', function () {
     $this->actingAs(User::factory()->create());
     $group = createHuiGroup(['total_slots' => 2]);
     app(RecordRoundResult::class)->handle($group->rounds[0], 0, WinnerType::Minh, $group->slots[0]);
+    app(RecordReceipt::class)->handle($group->rounds[0]->cashEntries()->sole(), 1_000_000, new DateTimeImmutable('2026-01-05'));
 
-    expect(app(ProfitReport::class)->forGroup($group)['ifWinNext'])->toBeNull();
+    // Thực tế +1.000.000 nhưng kỳ 2 còn phải đóng chết 1.000.000.
+    expect(app(ProfitReport::class)->forGroup($group))->toMatchArray([
+        'profit' => 1_000_000,
+        'outlook' => ['label' => 'Dự kiến mãn dây', 'profit' => 0],
+        'ifWinLast' => null,
+    ]);
 });

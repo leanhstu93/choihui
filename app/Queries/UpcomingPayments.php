@@ -19,7 +19,7 @@ use DateTimeImmutable;
  * Các khoản mình phải đóng đến một ngày (FR-08, FR-09), gồm cả khoản đã quá hạn.
  *
  * Kỳ đã nhập lãi thăm: lấy số tiền đã tính trong cash_entries. Kỳ chưa nhập lãi:
- * ước tính bằng lãi trung bình các kỳ đã mở (đánh dấu isEstimate).
+ * ước tính bằng lãi thăm của kỳ gần nhất đã mở (đánh dấu isEstimate).
  *
  * Lọc user_id tường minh thay vì dựa vào global scope, vì lệnh gửi email nhắc
  * chạy không có ai đăng nhập (document/01-dac-ta.md mục 8, ca test 5).
@@ -59,7 +59,7 @@ final class UpcomingPayments
      */
     private function paymentsOfGroup(HuiGroup $group, DateTimeImmutable $until): array
     {
-        $averageBid = HuiCalculator::averageBid($group->rounds->pluck('bid_amount', 'round_no')->all());
+        $latestBid = HuiCalculator::latestBid($group->rounds->pluck('bid_amount', 'round_no')->all());
         $wonRoundBySlot = $group->rounds
             ->filter(fn (HuiRound $round): bool => $round->winner_type === WinnerType::Minh)
             ->mapWithKeys(fn (HuiRound $round): array => [(string) $round->winner_slot_id => $round->round_no])
@@ -86,7 +86,7 @@ final class UpcomingPayments
 
             foreach ($group->slots as $slot) {
                 $wonRoundNo = $wonRoundBySlot[$slot->id] ?? null;
-                $amount = HuiCalculator::amountDue($round->round_no, $group->face_value, min($averageBid, $group->face_value), $wonRoundNo);
+                $amount = HuiCalculator::amountDue($round->round_no, $group->face_value, min($latestBid, $group->face_value), $wonRoundNo);
                 $payments[] = new UpcomingPayment($group->id, $group->name, $round->id, $round->round_no, $slot->label, $dueDate, $amount, true, null);
             }
         }
