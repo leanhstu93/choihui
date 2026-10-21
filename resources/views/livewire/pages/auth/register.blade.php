@@ -36,6 +36,9 @@ new #[Layout('layouts.guest')] class extends Component
 
         Auth::login($user);
 
+        // Mục tiêu "Đăng ký" trên Plausible, tách theo vai trò.
+        $this->js('window.plausible?.("Đăng ký", { props: { vai_tro: '.json_encode($user->role->label()).' } })');
+
         $this->redirect(route('dashboard', absolute: false), navigate: true);
     }
 }; ?>
@@ -94,6 +97,10 @@ new #[Layout('layouts.guest')] class extends Component
 
             <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
+
+        <p class="mt-4 text-xs text-gray-500">
+            Khi tạo tài khoản, bạn đồng ý với <a href="{{ route('privacy') }}" class="underline hover:text-gray-700">Chính sách bảo mật</a>.
+        </p>
 
         <div class="flex items-center justify-end mt-4">
             <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}" wire:navigate>

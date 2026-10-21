@@ -28,6 +28,7 @@ Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : view
 // SEO: sinh theo APP_URL để đổi tên miền không phải sửa file.
 Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nSitemap: ".url('sitemap.xml')."\n")
     ->header('Content-Type', 'text/plain; charset=UTF-8'))->name('robots');
+Route::view('chinh-sach', 'privacy')->name('privacy');
 Route::get('sitemap.xml', fn () => response()->view('sitemap')->header('Content-Type', 'application/xml; charset=UTF-8'))->name('sitemap');
 
 Route::middleware('auth')->group(function () {

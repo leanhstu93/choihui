@@ -37,4 +37,10 @@ return [
         ],
     ],
 
+    // Thống kê truy cập không dùng cookie. Để trống PLAUSIBLE_DOMAIN thì không nạp script (local, test).
+    'plausible' => [
+        'domain' => env('PLAUSIBLE_DOMAIN'),
+        'script' => env('PLAUSIBLE_SCRIPT', 'https://plausible.io/js/script.js'),
+    ],
+
 ];

@@ -275,6 +275,7 @@
 
         <footer class="px-4 py-6 text-center text-xs text-gray-400">
             © {{ date('Y') }} Sổ hụi · Công cụ ghi sổ và tính toán hụi, không nhận giữ tiền hay tổ chức hụi.
+            · <a href="{{ route('privacy') }}" class="underline hover:text-gray-600">Chính sách bảo mật</a>
         </footer>
 
         <script>
