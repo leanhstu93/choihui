@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Groups;
 
+use App\Actions\Host\SyncHostEntries;
 use App\Actions\Rounds\SyncCashEntries;
 use App\Exceptions\ConfirmationRequiredException;
 use App\Models\HuiGroup;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class UpdateGroup
 {
-    public function __construct(private SyncCashEntries $syncCashEntries) {}
+    public function __construct(private SyncCashEntries $syncCashEntries, private SyncHostEntries $syncHostEntries) {}
 
     /**
      * @param  array{name?: string, host_name?: string, host_phone?: string|null, due_offset_days?: int, commission_amount?: int, note?: string|null}  $attributes
@@ -30,7 +31,10 @@ final class UpdateGroup
             $group->update($editable);
 
             if ($group->wasChanged('commission_amount')) {
-                $conflicts = $this->syncCashEntries->handle($group, overwritePaid: $confirmed);
+                $conflicts = [
+                    ...$this->syncCashEntries->handle($group, overwritePaid: $confirmed),
+                    ...$this->syncHostEntries->handle($group, overwritePaid: $confirmed),
+                ];
 
                 if ($conflicts !== []) {
                     throw new ConfirmationRequiredException(count($conflicts));

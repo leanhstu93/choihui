@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\Livewire\Settings;
 
+use App\Actions\Account\ChangeRole;
 use App\Actions\Backup\RestoreBackup;
+use App\Enums\UserRole;
 use App\Exceptions\HuiActionException;
 use App\Http\Middleware\EnsurePinUnlocked;
 use App\Livewire\Actions\Logout;
@@ -93,6 +95,9 @@ class SettingsPage extends Component
 
     public function restoreBackup(RestoreBackup $restoreBackup): void
     {
+        // Sao lưu dữ liệu chủ hụi làm ở đợt sau (CH-14).
+        abort_if($this->user()->isHost(), 404);
+
         $this->validate([
             'backupFile' => ['required', 'file', 'max:5120'],
             'confirmRestore' => ['accepted'],
@@ -122,6 +127,26 @@ class SettingsPage extends Component
         session()->flash('status', "Đã khôi phục {$stats['groups']} dây hụi, {$stats['rounds']} kỳ, {$stats['entries']} dòng tiền.");
     }
 
+    /**
+     * Đổi vai trò tài khoản, chỉ khi chưa có dây nào (document/04-chu-hui.md C9).
+     */
+    public function switchRole(ChangeRole $changeRole): void
+    {
+        $user = $this->user();
+        $newRole = $user->isHost() ? UserRole::HuiVien : UserRole::ChuHui;
+
+        try {
+            $changeRole->handle($user, $newRole);
+        } catch (HuiActionException $exception) {
+            $this->addError('role', $exception->getMessage());
+
+            return;
+        }
+
+        session()->flash('status', 'Đã chuyển sang vai trò '.mb_strtolower($newRole->label()).'.');
+        $this->redirectRoute('settings', navigate: false);
+    }
+
     public function logout(Logout $logout): void
     {
         $logout();
@@ -130,7 +155,11 @@ class SettingsPage extends Component
 
     public function render(): View
     {
-        return view('livewire.settings.settings-page', ['hasPin' => $this->user()->pin_hash !== null]);
+        return view('livewire.settings.settings-page', [
+            'hasPin' => $this->user()->pin_hash !== null,
+            'isHost' => $this->user()->isHost(),
+            'roleLabel' => $this->user()->role->label(),
+        ]);
     }
 
     private function currentPinMatches(User $user): bool

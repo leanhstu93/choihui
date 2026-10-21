@@ -105,6 +105,16 @@ class HuiGroup extends Model
     }
 
     /**
+     * Khoản thu / chi của dây chủ hụi.
+     *
+     * @return HasManyThrough<HostEntry, HuiRound, $this>
+     */
+    public function hostEntries(): HasManyThrough
+    {
+        return $this->hasManyThrough(HostEntry::class, HuiRound::class, 'group_id', 'round_id');
+    }
+
+    /**
      * @return HasManyThrough<CashEntry, HuiRound, $this>
      */
     public function cashEntries(): HasManyThrough

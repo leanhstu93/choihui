@@ -8,6 +8,12 @@ use App\Livewire\Groups\GroupForm;
 use App\Livewire\Groups\GroupIndex;
 use App\Livewire\Groups\GroupShow;
 use App\Livewire\Groups\GroupStatement;
+use App\Livewire\Host\GroupForm as HostGroupForm;
+use App\Livewire\Host\GroupIndex as HostGroupIndex;
+use App\Livewire\Host\GroupShow as HostGroupShow;
+use App\Livewire\Host\RoundShow as HostRoundShow;
+use App\Livewire\Members\MemberIndex;
+use App\Livewire\Members\MemberShow;
 use App\Livewire\Reports\ProfitReportPage;
 use App\Livewire\Rounds\RoundShow;
 use App\Livewire\Settings\SettingsPage;
@@ -33,8 +39,19 @@ Route::middleware('auth')->group(function () {
 
             Route::get('reports', ProfitReportPage::class)->name('reports');
         });
+
+        Route::middleware('role:chu_hui')->prefix('chu-hui')->name('host.')->group(function () {
+            Route::get('groups', HostGroupIndex::class)->name('groups.index');
+            Route::get('groups/create', HostGroupForm::class)->name('groups.create');
+            Route::get('groups/{group}', HostGroupShow::class)->name('groups.show');
+            Route::get('groups/{group}/edit', HostGroupForm::class)->name('groups.edit');
+            Route::get('rounds/{round}', HostRoundShow::class)->name('rounds.show');
+
+            Route::get('members', MemberIndex::class)->name('members.index');
+            Route::get('members/{member}', MemberShow::class)->name('members.show');
+        });
         Route::get('settings', SettingsPage::class)->name('settings');
-        Route::get('settings/backup', BackupDownloadController::class)->name('settings.backup');
+        Route::get('settings/backup', BackupDownloadController::class)->middleware('role:hui_vien')->name('settings.backup');
     });
 });
 

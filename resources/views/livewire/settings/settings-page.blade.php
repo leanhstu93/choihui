@@ -42,6 +42,16 @@
     </section>
 
     <section class="rounded-xl bg-white p-4 shadow-sm">
+        <h2 class="font-semibold">Vai trò tài khoản</h2>
+        <p class="mt-1 text-sm text-gray-600">Đang là <strong>{{ $roleLabel }}</strong>. Chỉ đổi được khi tài khoản chưa có dây hụi nào.</p>
+        <button type="button" wire:click="switchRole" wire:confirm="Chuyển sang {{ $isHost ? 'hụi viên' : 'chủ hụi' }}?" class="mt-3 rounded-lg border border-gray-300 px-4 py-2 text-sm">
+            Chuyển sang {{ $isHost ? 'hụi viên' : 'chủ hụi' }}
+        </button>
+        @error('role') <p class="mt-2 text-sm text-red-600">{{ $message }}</p> @enderror
+    </section>
+
+    @unless ($isHost)
+    <section class="rounded-xl bg-white p-4 shadow-sm">
         <h2 class="font-semibold">Sao lưu dữ liệu</h2>
         <p class="mt-1 text-sm text-gray-600">Tải toàn bộ dây hụi về một file để cất giữ, hoặc khôi phục từ file đã tải.</p>
         <a href="{{ route('settings.backup') }}" download class="mt-3 inline-flex rounded-lg border border-emerald-600 px-4 py-2 text-sm font-semibold text-emerald-700">Tải file sao lưu</a>
@@ -58,6 +68,7 @@
             <button type="submit" class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" wire:loading.attr="disabled" wire:target="backupFile,restoreBackup">Khôi phục</button>
         </form>
     </section>
+    @endunless
 
     <section class="rounded-xl bg-white shadow-sm divide-y divide-gray-100 text-sm">
         <a href="{{ route('profile') }}" wire:navigate class="flex justify-between p-4"><span>Tài khoản và mật khẩu</span><span class="text-gray-400">&rsaquo;</span></a>

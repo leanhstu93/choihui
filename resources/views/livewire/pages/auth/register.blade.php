@@ -1,9 +1,11 @@
 <?php
 
+use App\Enums\UserRole;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -14,6 +16,7 @@ new #[Layout('layouts.guest')] class extends Component
     public string $email = '';
     public string $password = '';
     public string $password_confirmation = '';
+    public string $role = 'hui_vien';
 
     /**
      * Handle an incoming registration request.
@@ -24,7 +27,8 @@ new #[Layout('layouts.guest')] class extends Component
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
-        ]);
+            'role' => ['required', Rule::enum(UserRole::class)],
+        ], attributes: ['role' => 'vai trò']);
 
         $validated['password'] = Hash::make($validated['password']);
 
@@ -44,6 +48,22 @@ new #[Layout('layouts.guest')] class extends Component
             <x-text-input wire:model="name" id="name" class="block mt-1 w-full" type="text" name="name" required autofocus autocomplete="name" />
             <x-input-error :messages="$errors->get('name')" class="mt-2" />
         </div>
+
+        <!-- Vai trò (document/04-chu-hui.md C9) -->
+        <fieldset class="mt-4">
+            <legend class="text-sm font-medium text-gray-700">Bạn dùng app để</legend>
+            <div class="mt-1 grid grid-cols-2 gap-2 text-sm">
+                @foreach (\App\Enums\UserRole::cases() as $option)
+                    <label @class(['cursor-pointer rounded-lg border px-3 py-2', 'border-emerald-600 bg-emerald-50 font-semibold' => $role === $option->value, 'border-gray-300' => $role !== $option->value])>
+                        <input type="radio" wire:model.live="role" value="{{ $option->value }}" class="sr-only">
+                        <span class="block">{{ $option->value === 'chu_hui' ? 'Làm chủ hụi' : 'Chơi hụi' }}</span>
+                        <span class="block text-xs font-normal text-gray-500">{{ $option->value === 'chu_hui' ? 'Quản lý dây, thu / chi' : 'Theo dõi tay mình chơi' }}</span>
+                    </label>
+                @endforeach
+            </div>
+            <p class="mt-1 text-xs text-gray-500">Mỗi tài khoản một vai trò. Đổi được trong Cài đặt khi chưa có dây nào.</p>
+            <x-input-error :messages="$errors->get('role')" class="mt-2" />
+        </fieldset>
 
         <!-- Email Address -->
         <div class="mt-4">

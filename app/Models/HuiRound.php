@@ -86,6 +86,24 @@ class HuiRound extends Model
     }
 
     /**
+     * Lãi thăm của các kỳ trước kỳ này (mới nhất trước, không trùng), để gợi ý bấm
+     * chọn nhanh. Dùng group.rounds đã nạp sẵn.
+     *
+     * @return list<int>
+     */
+    public function previousBids(int $limit = 2): array
+    {
+        return $this->group->rounds
+            ->filter(fn (HuiRound $round): bool => $round->round_no < $this->round_no && $round->bid_amount !== null)
+            ->sortByDesc('round_no')
+            ->pluck('bid_amount')
+            ->unique()
+            ->take($limit)
+            ->values()
+            ->all();
+    }
+
+    /**
      * Tay hốt kỳ này của dây chủ hụi.
      *
      * @return BelongsTo<HostSlot, $this>

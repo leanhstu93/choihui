@@ -29,6 +29,16 @@ class Dashboard extends Component
 
     public ?string $actionError = null;
 
+    /**
+     * Trang chủ chủ hụi làm ở bước H5; tạm đưa chủ hụi về danh sách dây của họ.
+     */
+    public function mount(): void
+    {
+        if (Auth::user()?->isHost()) {
+            $this->redirectRoute('host.groups.index', navigate: true);
+        }
+    }
+
     public function payInFull(string $entryId, MarkPaid $markPaid): void
     {
         $entry = CashEntry::query()->findOrFail($entryId);

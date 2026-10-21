@@ -160,26 +160,9 @@ class RoundShow extends Component
             'group' => $group,
             'dueDate' => HuiSchedule::dueDate($this->round->open_date->toDateTimeImmutable(), $group->due_offset_days),
             'winPreview' => $this->winPreview(),
-            'bidSuggestions' => $this->bidSuggestions(),
+            'bidSuggestions' => $this->round->previousBids(),
             'availableSlots' => $group->slots->filter(fn (MySlot $slot) => $slot->wonRound === null || $slot->wonRound->is($this->round)),
         ])->title('Kỳ '.$this->round->round_no.' · '.$group->name);
-    }
-
-    /**
-     * Lãi thăm của các kỳ trước (mới nhất trước, không trùng) để bấm chọn nhanh.
-     *
-     * @return list<int>
-     */
-    private function bidSuggestions(): array
-    {
-        return $this->round->group->rounds
-            ->filter(fn (HuiRound $round): bool => $round->round_no < $this->round->round_no && $round->bid_amount !== null)
-            ->sortByDesc('round_no')
-            ->pluck('bid_amount')
-            ->unique()
-            ->take(2)
-            ->values()
-            ->all();
     }
 
     /**
