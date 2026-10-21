@@ -49,3 +49,24 @@ test('received payouts count towards actual profit', function () {
 
     expect(app(ProfitReport::class)->forUser($user)['groups'][0])->toMatchArray(['received' => 1_000_000, 'profit' => 1_000_000]);
 });
+
+test('an unwon slot shows the profit if it wins the next free round', function () {
+    $this->actingAs(User::factory()->create());
+    $group = createHuiGroup(['total_slots' => 12, 'commission_amount' => 1_000_000]);
+    foreach (range(0, 5) as $index) {
+        app(RecordRoundResult::class)->handle($group->rounds[$index], 100_000, WinnerType::NguoiKhac);
+        app(MarkPaid::class)->handle($group->rounds[$index]->cashEntries()->sole(), 900_000, new DateTimeImmutable('2026-01-05'));
+    }
+
+    // Hốt kỳ 7: nhận 6 × 1.000.000 + 5 × 900.000 − thảo 1.000.000 = 9.500.000,
+    // đã đóng 6 × 900.000, còn đóng chết kỳ 8–12 là 5 × 1.000.000.
+    expect(app(ProfitReport::class)->forGroup($group)['ifWinNext'])->toBe(['round_no' => 7, 'profit' => -900_000]);
+});
+
+test('there is no next-round profit once every slot has won', function () {
+    $this->actingAs(User::factory()->create());
+    $group = createHuiGroup(['total_slots' => 2]);
+    app(RecordRoundResult::class)->handle($group->rounds[0], 0, WinnerType::Minh, $group->slots[0]);
+
+    expect(app(ProfitReport::class)->forGroup($group)['ifWinNext'])->toBeNull();
+});

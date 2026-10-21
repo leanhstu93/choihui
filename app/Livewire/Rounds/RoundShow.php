@@ -153,30 +153,57 @@ class RoundShow extends Component
 
     public function render(): View
     {
-        $this->round->load(['group.slots.wonRound', 'cashEntries.slot']);
+        $this->round->load(['group.slots.wonRound', 'group.rounds', 'cashEntries.slot']);
         $group = $this->round->group;
 
         return view('livewire.rounds.round-show', [
             'group' => $group,
             'dueDate' => HuiSchedule::dueDate($this->round->open_date->toDateTimeImmutable(), $group->due_offset_days),
-            'payoutPreview' => $this->payoutPreview(),
+            'winPreview' => $this->winPreview(),
+            'bidSuggestions' => $this->bidSuggestions(),
             'availableSlots' => $group->slots->filter(fn (MySlot $slot) => $slot->wonRound === null || $slot->wonRound->is($this->round)),
         ])->title('Kỳ '.$this->round->round_no.' · '.$group->name);
     }
 
     /**
-     * Tiền nhận (đã trừ thảo) nếu tay của mình hốt kỳ này với lãi thăm đang nhập.
+     * Lãi thăm của các kỳ trước (mới nhất trước, không trùng) để bấm chọn nhanh.
+     *
+     * @return list<int>
      */
-    private function payoutPreview(): ?int
+    private function bidSuggestions(): array
+    {
+        return $this->round->group->rounds
+            ->filter(fn (HuiRound $round): bool => $round->round_no < $this->round->round_no && $round->bid_amount !== null)
+            ->sortByDesc('round_no')
+            ->pluck('bid_amount')
+            ->unique()
+            ->take(4)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Nếu một tay của mình hốt kỳ này với lãi thăm đang nhập: tiền nhận (đã trừ
+     * thảo) và lời/lỗ dự kiến của tay đó khi dây chạy hết (kỳ chưa mở lấy lãi
+     * trung bình).
+     *
+     * @return array{payout: int, profit: int}|null
+     */
+    private function winPreview(): ?array
     {
         if ($this->bidAmount === null) {
             return null;
         }
 
         $group = $this->round->group;
+        $roundNo = $this->round->round_no;
+        $bidsByRound = [$roundNo => $this->bidAmount] + $group->rounds->pluck('bid_amount', 'round_no')->all();
 
         try {
-            return HuiCalculator::netPayout($this->round->round_no, $group->total_slots, $group->face_value, $this->bidAmount, $group->commission_amount);
+            return [
+                'payout' => HuiCalculator::netPayout($roundNo, $group->total_slots, $group->face_value, $this->bidAmount, $group->commission_amount),
+                'profit' => HuiCalculator::projectedProfit($group->total_slots, $group->face_value, $group->commission_amount, $bidsByRound, $roundNo),
+            ];
         } catch (InvalidArgumentException) {
             return null;
         }

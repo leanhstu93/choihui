@@ -23,6 +23,12 @@ use Livewire\Component;
 #[Layout('layouts.app')]
 class GroupForm extends Component
 {
+    /** @var list<int> */
+    private const array DEFAULT_FACE_VALUES = [1_000_000, 2_000_000, 3_000_000, 5_000_000];
+
+    /** @var list<int> */
+    private const array DEFAULT_COMMISSIONS = [200_000, 500_000, 1_000_000];
+
     #[Locked]
     public ?HuiGroup $group = null;
 
@@ -119,8 +125,28 @@ class GroupForm extends Component
 
     public function render(): View
     {
-        return view('livewire.groups.group-form')
+        $recentGroups = HuiGroup::query()->latest()->limit(20)->get(['face_value', 'commission_amount']);
+
+        return view('livewire.groups.group-form', [
+            'faceValueSuggestions' => $this->suggestAmounts($recentGroups->pluck('face_value')->all(), self::DEFAULT_FACE_VALUES),
+            'commissionSuggestions' => $this->suggestAmounts($recentGroups->pluck('commission_amount')->all(), self::DEFAULT_COMMISSIONS),
+        ])
             ->title($this->group === null ? 'Thêm dây hụi' : 'Sửa dây hụi');
+    }
+
+    /**
+     * Số tiền để bấm chọn nhanh: các số đã dùng ở dây gần đây trước, rồi đến số
+     * thường gặp; bỏ số 0 và số trùng, tối đa 4.
+     *
+     * @param  list<int>  $usedAmounts
+     * @param  list<int>  $defaultAmounts
+     * @return list<int>
+     */
+    private function suggestAmounts(array $usedAmounts, array $defaultAmounts): array
+    {
+        $amounts = array_unique(array_filter([...$usedAmounts, ...$defaultAmounts], fn (int $amount): bool => $amount > 0));
+
+        return array_slice(array_values($amounts), 0, 4);
     }
 
     private function update(UpdateGroup $updateGroup, bool $confirmed): void

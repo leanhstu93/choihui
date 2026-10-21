@@ -124,7 +124,28 @@ final class HuiCalculator
      */
     public static function assumedWinRounds(int $totalSlots, array $takenRoundNos, int $unwonSlotCount): array
     {
-        $freeRoundNos = array_values(array_diff(range($totalSlots, 1), $takenRoundNos));
+        return self::pickFreeRounds(range($totalSlots, 1), $takenRoundNos, $unwonSlotCount);
+    }
+
+    /**
+     * Kỳ giả định khi các tay chưa hốt hốt sớm nhất có thể: lấy các kỳ còn trống từ đầu dây trở đi.
+     *
+     * @param  list<int>  $takenRoundNos  Các kỳ đã có người hốt (mình hoặc người khác).
+     * @return list<int> Kỳ giả định, theo thứ tự tay chưa hốt.
+     */
+    public static function nextWinRounds(int $totalSlots, array $takenRoundNos, int $unwonSlotCount): array
+    {
+        return self::pickFreeRounds(range(1, $totalSlots), $takenRoundNos, $unwonSlotCount);
+    }
+
+    /**
+     * @param  list<int>  $roundNos  Các kỳ theo thứ tự ưu tiên.
+     * @param  list<int>  $takenRoundNos
+     * @return list<int>
+     */
+    private static function pickFreeRounds(array $roundNos, array $takenRoundNos, int $unwonSlotCount): array
+    {
+        $freeRoundNos = array_values(array_diff($roundNos, $takenRoundNos));
 
         if ($unwonSlotCount > count($freeRoundNos)) {
             throw new InvalidArgumentException('Số tay chưa hốt nhiều hơn số kỳ còn trống.');

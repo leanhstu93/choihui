@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Actions\Rounds\RecordRoundResult;
 use App\Enums\CashEntryStatus;
 use App\Enums\WinnerType;
 use App\Livewire\Rounds\RoundShow;
@@ -26,12 +27,30 @@ test('recording a result where my slot wins creates the payout', function () {
         ->set('bidAmount', 100_000)
         ->set('winnerType', 'minh')
         ->assertSeeHtml('Dự kiến nhận: <strong>7.300.000 đ</strong>')
+        // Kỳ 1–2 lấy lãi trung bình 100.000: đóng 2 × 900.000, nhận 7.300.000, đóng chết kỳ 4–10 là 7 × 1.000.000.
+        ->assertSeeHtml('Lời / lỗ dự kiến: <strong class="text-red-700">-1.500.000 đ</strong>')
         ->set('winnerSlotId', $group->slots[0]->id)
         ->call('saveResult')
         ->assertHasNoErrors()
         ->assertRedirect(route('rounds.show', $round));
 
     expect($round->cashEntries()->sole()->amount_expected)->toBe(7_300_000);
+});
+
+test('bids of earlier rounds are suggested and can be picked in one tap', function () {
+    $this->actingAs(User::factory()->create());
+    $group = createHuiGroup();
+    foreach ([100_000, 120_000, 100_000, 150_000] as $index => $bid) {
+        app(RecordRoundResult::class)->handle($group->rounds[$index], $bid, WinnerType::NguoiKhac);
+    }
+
+    // Kỳ 4 đã có lãi 150.000 nhưng không phải kỳ trước kỳ 4 nên không được gợi ý.
+    Livewire::test(RoundShow::class, ['round' => $group->rounds[3]->fresh()])
+        ->set('bidAmount', null)
+        ->assertSeeHtml(['>100.000 đ</button>', '>120.000 đ</button>'])
+        ->assertDontSeeHtml('>150.000 đ</button>')
+        ->call('$set', 'bidAmount', 120_000)
+        ->assertSet('bidAmount', 120_000);
 });
 
 test('a slot of another user cannot be chosen as the winner', function () {

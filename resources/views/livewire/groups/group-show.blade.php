@@ -42,7 +42,11 @@
     <div class="grid grid-cols-3 gap-2 text-center">
         <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Đã đóng</div><div class="font-semibold">@money($totalPaid)</div></div>
         <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Đã nhận</div><div class="font-semibold">@money($totalReceived)</div></div>
-        <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Lời / lỗ</div><div @class(['font-semibold', 'text-emerald-700' => $profit >= 0, 'text-red-700' => $profit < 0])>@money($profit)</div></div>
+        @if ($ifWinNext)
+            <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Nếu hốt kỳ {{ $ifWinNext['round_no'] }}</div><div @class(['font-semibold', 'text-emerald-700' => $ifWinNext['profit'] >= 0, 'text-red-700' => $ifWinNext['profit'] < 0])>@money($ifWinNext['profit'])</div></div>
+        @else
+            <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Lời / lỗ</div><div @class(['font-semibold', 'text-emerald-700' => $profit >= 0, 'text-red-700' => $profit < 0])>@money($profit)</div></div>
+        @endif
     </div>
 
     <section class="rounded-xl bg-white p-4 shadow-sm">

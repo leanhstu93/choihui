@@ -28,6 +28,7 @@
         <form wire:submit="saveResult" class="mt-3 space-y-4">
             <x-field label="Lãi thăm" name="bid_amount" hint="Kỳ đầu chủ hụi hốt không lãi thì nhập 0.">
                 <x-money-input id="bid_amount" model="bidAmount" :live="true" />
+                <x-amount-suggestions model="bidAmount" :amounts="$bidSuggestions" :selected="$bidAmount" />
             </x-field>
 
             <fieldset>
@@ -52,8 +53,11 @@
                         @endforeach
                     </select>
                 </x-field>
-                @if ($payoutPreview !== null)
-                    <p class="rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-800">Dự kiến nhận: <strong>@money($payoutPreview)</strong>@if ($group->commission_amount > 0) (đã trừ thảo @money($group->commission_amount))@endif</p>
+                @if ($winPreview !== null)
+                    <div class="space-y-1 rounded-lg bg-sky-50 px-3 py-2 text-sm text-sky-800">
+                        <p>Dự kiến nhận: <strong>@money($winPreview['payout'])</strong>@if ($group->commission_amount > 0) (đã trừ thảo @money($group->commission_amount))@endif</p>
+                        <p>Lời / lỗ dự kiến: <strong @class(['text-emerald-700' => $winPreview['profit'] >= 0, 'text-red-700' => $winPreview['profit'] < 0])>@money($winPreview['profit'])</strong></p>
+                    </div>
                 @endif
             @elseif ($winnerType === 'nguoi_khac')
                 <x-field label="Tên người hốt (không bắt buộc)" name="winner_name">

@@ -73,6 +73,11 @@ test('unwon slots are assumed to win the last free rounds', function () {
         ->toBe([9, 8]);
 });
 
+test('unwon slots can be assumed to win the earliest free rounds', function () {
+    expect(HuiCalculator::nextWinRounds(totalSlots: 10, takenRoundNos: [1, 2, 10], unwonSlotCount: 2))
+        ->toBe([3, 4]);
+});
+
 test('invalid input is rejected', function (Closure $calculate, string $message) {
     expect($calculate)->toThrow(InvalidArgumentException::class, $message);
 })->with([
@@ -85,4 +90,5 @@ test('invalid input is rejected', function (Closure $calculate, string $message)
     'negative commission' => [fn () => HuiCalculator::netPayout(3, 10, 1_000_000, 0, -1), 'Tiền thảo không được âm.'],
     'commission above payout' => [fn () => HuiCalculator::netPayout(1, 2, 1_000_000, 1_000_000, 1), 'Tiền thảo lớn hơn số tiền hốt được.'],
     'more unwon slots than free rounds' => [fn () => HuiCalculator::assumedWinRounds(3, [1, 2], 2), 'Số tay chưa hốt nhiều hơn số kỳ còn trống.'],
+    'more unwon slots than free rounds when winning early' => [fn () => HuiCalculator::nextWinRounds(3, [1, 2], 2), 'Số tay chưa hốt nhiều hơn số kỳ còn trống.'],
 ]);

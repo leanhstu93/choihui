@@ -85,6 +85,20 @@ test('a group can be created with its slots', function () {
         ->and($group->rounds()->count())->toBe(12);
 });
 
+test('the form suggests face values and commissions used before, then common ones', function () {
+    $this->actingAs(User::factory()->create());
+    $group = createHuiGroup(['face_value' => 4_000_000, 'commission_amount' => 300_000]);
+
+    $html = Livewire::test(GroupForm::class)->html();
+    $suggested = fn (string $model): array => preg_match_all("/\\\$set\('{$model}', (\d+)\)/", $html, $matches) ? array_map('intval', $matches[1]) : [];
+
+    expect($suggested('faceValue'))->toBe([4_000_000, 1_000_000, 2_000_000, 3_000_000])
+        ->and($suggested('commissionAmount'))->toBe([300_000, 200_000, 500_000, 1_000_000]);
+
+    Livewire::test(GroupForm::class, ['group' => $group])
+        ->assertDontSeeHtml("\$set('faceValue'");
+});
+
 test('creating a group reports invalid input in Vietnamese', function () {
     $this->actingAs(User::factory()->create());
 
@@ -127,7 +141,8 @@ test('the group page shows round states and totals', function () {
 
     Livewire::test(GroupShow::class, ['group' => $group])
         ->assertSeeInOrder(['Kỳ 1', 'Đã đóng', 'Kỳ 2', 'Quá hạn', 'Kỳ 3', 'Chờ nhập kết quả', 'Kỳ 4', 'Chưa mở'])
-        ->assertSee('900.000 đ');
+        ->assertSee('900.000 đ')
+        ->assertSee('Nếu hốt kỳ 3');
 });
 
 test('slots can be added and removed from the group page', function () {

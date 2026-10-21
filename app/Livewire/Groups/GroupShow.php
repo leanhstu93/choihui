@@ -10,7 +10,6 @@ use App\Actions\Groups\FinishGroup;
 use App\Actions\Groups\MarkGroupBroken;
 use App\Actions\Groups\RemoveSlot;
 use App\Actions\Groups\UndoGroupBroken;
-use App\Domain\HuiCalculator;
 use App\Domain\HuiSchedule;
 use App\Enums\CashDirection;
 use App\Enums\CashEntryStatus;
@@ -22,6 +21,7 @@ use App\Models\CashEntry;
 use App\Models\HuiGroup;
 use App\Models\HuiRound;
 use App\Models\MySlot;
+use App\Queries\ProfitReport;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
@@ -105,19 +105,17 @@ class GroupShow extends Component
         $this->redirectRoute('groups.index', navigate: true);
     }
 
-    public function render(): View
+    public function render(ProfitReport $profitReport): View
     {
         $this->group->load(['slots.wonRound', 'rounds.cashEntries']);
-        $entries = $this->group->rounds->flatMap(fn (HuiRound $round) => $round->cashEntries);
-
-        $totalPaid = (int) $entries->where('direction', CashDirection::Dong)->sum('amount_actual');
-        $totalReceived = (int) $entries->where('direction', CashDirection::Nhan)->sum('amount_actual');
+        $summary = $profitReport->forGroup($this->group);
 
         return view('livewire.groups.group-show', [
             'roundStates' => $this->group->rounds->mapWithKeys(fn (HuiRound $round) => [$round->id => $this->roundState($round)]),
-            'totalPaid' => $totalPaid,
-            'totalReceived' => $totalReceived,
-            'profit' => HuiCalculator::profit($totalReceived, $totalPaid),
+            'totalPaid' => $summary['paid'],
+            'totalReceived' => $summary['received'],
+            'profit' => $summary['profit'],
+            'ifWinNext' => $summary['ifWinNext'],
         ])->title($this->group->name);
     }
 

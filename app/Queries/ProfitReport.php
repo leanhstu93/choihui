@@ -20,7 +20,8 @@ use InvalidArgumentException;
  *
  * Thực tế = tiền đã nhận − tiền đã đóng. Dự kiến (chỉ dây đang chạy) = tổng
  * projectedProfit của các tay, kỳ chưa mở lấy lãi trung bình, tay chưa hốt giả
- * định hốt các kỳ cuối còn trống.
+ * định hốt các kỳ cuối còn trống. "Nếu hốt kỳ tới" (màn chi tiết dây) giống dự
+ * kiến nhưng tay chưa hốt giả định hốt các kỳ còn trống sớm nhất.
  */
 final class ProfitReport
 {
@@ -59,7 +60,7 @@ final class ProfitReport
     /**
      * Lời/lỗ của một dây. Dây phải có sẵn slots, rounds.cashEntries (nạp nếu thiếu).
      *
-     * @return array{group: HuiGroup, paid: int, received: int, profit: int, projected: int|null}
+     * @return array{group: HuiGroup, paid: int, received: int, profit: int, projected: int|null, ifWinNext: array{round_no: int, profit: int}|null}
      */
     public function forGroup(HuiGroup $group): array
     {
@@ -69,16 +70,26 @@ final class ProfitReport
         $paid = (int) $entries->filter(fn (CashEntry $entry) => $entry->direction === CashDirection::Dong)->sum('amount_actual');
         $received = (int) $entries->filter(fn (CashEntry $entry) => $entry->direction === CashDirection::Nhan)->sum('amount_actual');
 
+        $isRunning = $group->status === HuiGroupStatus::DangChay;
+
         return [
             'group' => $group,
             'paid' => $paid,
             'received' => $received,
             'profit' => HuiCalculator::profit($received, $paid),
-            'projected' => $group->status === HuiGroupStatus::DangChay ? $this->projectedProfit($group) : null,
+            'projected' => $isRunning ? $this->projectedProfit($group, winEarliest: false)['profit'] ?? null : null,
+            'ifWinNext' => $isRunning ? $this->projectedProfit($group, winEarliest: true) : null,
         ];
     }
 
-    private function projectedProfit(HuiGroup $group): ?int
+    /**
+     * Tổng lời/lỗ dự kiến của các tay; round_no là kỳ giả định của tay chưa hốt
+     * đầu tiên. Null khi dữ liệu không đủ để tính, hoặc (khi winEarliest) khi
+     * không còn tay chưa hốt.
+     *
+     * @return array{round_no: int, profit: int}|null
+     */
+    private function projectedProfit(HuiGroup $group, bool $winEarliest): ?array
     {
         $bidsByRound = $group->rounds->pluck('bid_amount', 'round_no')->all();
         $winRoundBySlot = $group->rounds
@@ -92,16 +103,25 @@ final class ProfitReport
         $unwonSlots = $group->slots->filter(fn (MySlot $slot): bool => ! isset($winRoundBySlot[$slot->id]))->values();
 
         try {
-            $assumedRounds = HuiCalculator::assumedWinRounds($group->total_slots, $takenRoundNos, $unwonSlots->count());
+            $assumedRounds = $winEarliest
+                ? HuiCalculator::nextWinRounds($group->total_slots, $takenRoundNos, $unwonSlots->count())
+                : HuiCalculator::assumedWinRounds($group->total_slots, $takenRoundNos, $unwonSlots->count());
+
+            if ($winEarliest && $assumedRounds === []) {
+                return null;
+            }
 
             foreach ($unwonSlots as $index => $slot) {
                 $winRoundBySlot[$slot->id] = $assumedRounds[$index];
             }
 
-            return array_sum(array_map(
-                fn (int $winRoundNo): int => HuiCalculator::projectedProfit($group->total_slots, $group->face_value, $group->commission_amount, $bidsByRound, $winRoundNo),
-                $winRoundBySlot,
-            ));
+            return [
+                'round_no' => $assumedRounds[0] ?? 0,
+                'profit' => array_sum(array_map(
+                    fn (int $winRoundNo): int => HuiCalculator::projectedProfit($group->total_slots, $group->face_value, $group->commission_amount, $bidsByRound, $winRoundNo),
+                    $winRoundBySlot,
+                )),
+            ];
         } catch (InvalidArgumentException) {
             return null;
         }

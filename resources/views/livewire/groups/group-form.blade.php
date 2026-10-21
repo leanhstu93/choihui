@@ -15,6 +15,9 @@
             <div class="grid grid-cols-2 gap-3">
                 <x-field label="Mệnh giá" name="face_value" :hint="$group ? 'Không sửa sau khi tạo' : null">
                     <x-money-input id="face_value" model="faceValue" :disabled="(bool) $group" required />
+                    @unless ($group)
+                        <x-amount-suggestions model="faceValue" :amounts="$faceValueSuggestions" :selected="$faceValue" />
+                    @endunless
                 </x-field>
                 <x-field label="Tổng số tay" name="total_slots">
                     <input id="total_slots" type="number" inputmode="numeric" min="2" step="1" wire:model="totalSlots" class="{{ $inputClass }}" @disabled($group) required>
@@ -32,6 +35,7 @@
 
             <x-field label="Tiền thảo mỗi lần hốt" name="commission_amount" hint="Số tiền đưa chủ hụi khi tay của mình hốt. Để 0 nếu không có.">
                 <x-money-input id="commission_amount" model="commissionAmount" />
+                <x-amount-suggestions model="commissionAmount" :amounts="$commissionSuggestions" :selected="$commissionAmount" />
             </x-field>
         </div>
 
