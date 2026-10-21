@@ -22,7 +22,13 @@ use App\Livewire\Settings\SettingsPage;
 use App\Livewire\Settings\UnlockPage;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome');
+// Trang giới thiệu cho khách; người đã đăng nhập vào thẳng sổ của mình.
+Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : view('welcome'))->name('home');
+
+// SEO: sinh theo APP_URL để đổi tên miền không phải sửa file.
+Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nSitemap: ".url('sitemap.xml')."\n")
+    ->header('Content-Type', 'text/plain; charset=UTF-8'))->name('robots');
+Route::get('sitemap.xml', fn () => response()->view('sitemap')->header('Content-Type', 'application/xml; charset=UTF-8'))->name('sitemap');
 
 Route::middleware('auth')->group(function () {
     Route::get('unlock', UnlockPage::class)->name('unlock');
