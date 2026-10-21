@@ -67,16 +67,15 @@ jobs:
       - name: Deploy to Hostinger
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.SSH_HOST }}
-          port: ${{ secrets.SSH_PORT }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          host: ${{ secrets.HOSTINGER_SSH_HOST }}
+          username: ${{ secrets.HOSTINGER_SSH_USER }}
+          port: ${{ secrets.HOSTINGER_SSH_PORT }}
+          key: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
           script_stop: true
           script: |
-            set -e
+            # Chờ Hostinger tự đồng bộ git xong
+            sleep 60
             cd ~/domains/madeby.io.vn/public_html
-            git pull --ff-only origin main
             composer2 install --no-dev --prefer-dist --optimize-autoloader --no-interaction
-            php artisan migrate --force
             php artisan optimize:clear
             php artisan optimize
