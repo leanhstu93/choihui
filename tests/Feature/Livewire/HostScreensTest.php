@@ -36,11 +36,13 @@ test('a new account can register as a host', function () {
     expect(User::sole()->role)->toBe(UserRole::ChuHui);
 });
 
-test('hosts are sent from the home page to their groups and see the host navigation', function () {
+test('hosts are sent from the home page to their own home page and see the host navigation', function () {
     $this->actingAs(User::factory()->host()->create());
 
-    Livewire::test(Dashboard::class)->assertRedirect(route('host.groups.index'));
-    $this->get(route('host.groups.index'))->assertOk()->assertSee('Hụi viên')->assertDontSee('Báo cáo');
+    Livewire::test(Dashboard::class)->assertRedirect(route('host.dashboard'));
+    $this->get(route('host.dashboard'))->assertOk()
+        ->assertSeeInOrder(['Trang chủ', 'Dây hụi', 'Hụi viên', 'Báo cáo', 'Cài đặt'])
+        ->assertSee(route('host.reports'));
 });
 
 test('host pages render for their owner', function (Closure $url) {
@@ -49,6 +51,8 @@ test('host pages render for their owner', function (Closure $url) {
 
     $this->get($url($group))->assertOk();
 })->with([
+    'home' => [fn () => route('host.dashboard')],
+    'report' => [fn () => route('host.reports')],
     'group list' => [fn () => route('host.groups.index')],
     'create group' => [fn () => route('host.groups.create')],
     'group' => [fn (HuiGroup $group) => route('host.groups.show', $group)],
@@ -72,7 +76,7 @@ test('another host\'s pages return 404 and players cannot open host pages', func
 
 test('players get 404 on the host pages that do not need a record', function (string $routeName) {
     $this->actingAs(User::factory()->create())->get(route($routeName))->assertNotFound();
-})->with(['host.groups.index', 'host.groups.create', 'host.members.index']);
+})->with(['host.dashboard', 'host.reports', 'host.groups.index', 'host.groups.create', 'host.members.index']);
 
 test('a host group is created with a member on every slot', function () {
     $this->actingAs(User::factory()->host()->create());

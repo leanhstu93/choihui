@@ -8,9 +8,11 @@ use App\Livewire\Groups\GroupForm;
 use App\Livewire\Groups\GroupIndex;
 use App\Livewire\Groups\GroupShow;
 use App\Livewire\Groups\GroupStatement;
+use App\Livewire\Host\Dashboard as HostDashboard;
 use App\Livewire\Host\GroupForm as HostGroupForm;
 use App\Livewire\Host\GroupIndex as HostGroupIndex;
 use App\Livewire\Host\GroupShow as HostGroupShow;
+use App\Livewire\Host\ReportPage as HostReportPage;
 use App\Livewire\Host\RoundShow as HostRoundShow;
 use App\Livewire\Members\MemberIndex;
 use App\Livewire\Members\MemberShow;
@@ -41,6 +43,8 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::middleware('role:chu_hui')->prefix('chu-hui')->name('host.')->group(function () {
+            Route::get('/', HostDashboard::class)->name('dashboard');
+            Route::get('reports', HostReportPage::class)->name('reports');
             Route::get('groups', HostGroupIndex::class)->name('groups.index');
             Route::get('groups/create', HostGroupForm::class)->name('groups.create');
             Route::get('groups/{group}', HostGroupShow::class)->name('groups.show');

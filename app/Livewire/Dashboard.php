@@ -30,12 +30,12 @@ class Dashboard extends Component
     public ?string $actionError = null;
 
     /**
-     * Trang chủ chủ hụi làm ở bước H5; tạm đưa chủ hụi về danh sách dây của họ.
+     * Sau đăng nhập mọi người về đây; chủ hụi có trang chủ riêng (CH-08).
      */
     public function mount(): void
     {
         if (Auth::user()?->isHost()) {
-            $this->redirectRoute('host.groups.index', navigate: true);
+            $this->redirectRoute('host.dashboard', navigate: true);
         }
     }
 
