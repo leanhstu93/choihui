@@ -329,5 +329,6 @@
             });
         </script>
         @livewireScripts
+        <x-cookie-consent />
     </body>
 </html>

@@ -36,8 +36,8 @@ new #[Layout('layouts.guest')] class extends Component
 
         Auth::login($user);
 
-        // Mục tiêu "Đăng ký" trên Plausible, tách theo vai trò.
-        $this->js('window.plausible?.("Đăng ký", { props: { vai_tro: '.json_encode($user->role->label()).' } })');
+        // Sự kiện sign_up của Google Analytics (đánh dấu là chuyển đổi), tách theo vai trò.
+        $this->js('window.gtag?.("event", "sign_up", { method: "email", vai_tro: '.json_encode($user->role->value).' })');
 
         $this->redirect(route('dashboard', absolute: false), navigate: true);
     }

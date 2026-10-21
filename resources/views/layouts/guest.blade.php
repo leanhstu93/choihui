@@ -14,5 +14,6 @@
                 {{ $slot }}
             </div>
         </div>
+        <x-cookie-consent />
     </body>
 </html>

@@ -19,7 +19,17 @@
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-@if (config('services.plausible.domain'))
-    <script defer data-domain="{{ config('services.plausible.domain') }}" src="{{ config('services.plausible.script') }}"></script>
-    <script>window.plausible = window.plausible || function () { (window.plausible.q = window.plausible.q || []).push(arguments) }</script>
+@if ($gaId = config('services.google_analytics.measurement_id'))
+    {{-- Consent Mode v2: mặc định không đặt cookie, chỉ bật khi người dùng đồng ý (x-cookie-consent). --}}
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('consent', 'default', {
+            analytics_storage: localStorage.getItem('cookie-consent') === 'granted' ? 'granted' : 'denied',
+            ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied',
+        });
+        gtag('js', new Date());
+        gtag('config', @js($gaId));
+    </script>
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ $gaId }}"></script>
 @endif

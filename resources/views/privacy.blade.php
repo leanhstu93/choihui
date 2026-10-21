@@ -44,7 +44,7 @@
 
             <section>
                 <h2>Thống kê truy cập</h2>
-                <p>Chúng tôi dùng Plausible để đếm lượt xem trang. Plausible <strong>không dùng cookie</strong>, không lưu địa chỉ IP và không theo dõi bạn qua các trang web khác.</p>
+                <p>Chúng tôi dùng Google Analytics để biết trang nào được xem nhiều và có bao nhiêu người đăng ký. Cookie thống kê <strong>chỉ được đặt khi bạn bấm "Đồng ý"</strong>; nếu bạn từ chối, Google chỉ nhận tín hiệu ẩn danh, không có cookie. Chúng tôi không bật quảng cáo hay cá nhân hóa quảng cáo. Muốn đổi lựa chọn, hãy xóa dữ liệu trang web trong trình duyệt.</p>
             </section>
 
             <section>
@@ -63,5 +63,6 @@
         </main>
 
         <footer class="px-4 py-6 text-center text-xs text-gray-400">© {{ date('Y') }} Sổ hụi</footer>
+        <x-cookie-consent />
     </body>
 </html>

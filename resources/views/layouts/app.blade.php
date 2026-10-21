@@ -19,5 +19,6 @@
         </div>
 
         <x-bottom-nav />
+        <x-cookie-consent />
     </body>
 </html>

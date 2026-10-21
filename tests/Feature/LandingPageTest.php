@@ -25,16 +25,19 @@ test('robots and sitemap point to the current domain', function () {
 });
 
 test('the privacy policy is public, linked and listed in the sitemap', function () {
-    $this->get(route('privacy'))->assertOk()->assertSee('Chính sách bảo mật')->assertSee('không dùng cookie');
+    $this->get(route('privacy'))->assertOk()->assertSee('Chính sách bảo mật')->assertSee('Google Analytics');
     $this->get('/')->assertSee(route('privacy'));
     $this->get('/register')->assertSee(route('privacy'));
     $this->get('/sitemap.xml')->assertSee('<loc>'.route('privacy').'</loc>', false);
 });
 
-test('the analytics script is only loaded when a Plausible domain is configured', function () {
-    config(['services.plausible.domain' => null]);
-    $this->get('/')->assertDontSee('plausible.io/js');
+test('Google Analytics is only loaded when configured, with cookies denied until consent', function () {
+    config(['services.google_analytics.measurement_id' => null]);
+    $this->get('/')->assertDontSee('googletagmanager.com')->assertDontSee('cookie-consent');
 
-    config(['services.plausible.domain' => 'madeby.io.vn']);
-    $this->get('/')->assertSee('data-domain="madeby.io.vn" src="https://plausible.io/js/script.js"', false);
+    config(['services.google_analytics.measurement_id' => 'G-TEST123']);
+    $this->get('/')
+        ->assertSee('https://www.googletagmanager.com/gtag/js?id=G-TEST123', false)
+        ->assertSeeInOrder(["gtag('consent', 'default'", "'denied'", "gtag('config'"], false)
+        ->assertSee('id="cookie-consent"', false);
 });
