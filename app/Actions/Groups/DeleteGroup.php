@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Actions\Groups;
 
 use App\Models\CashEntry;
+use App\Models\HostEntry;
+use App\Models\HostSlot;
 use App\Models\HuiGroup;
 use App\Models\HuiRound;
 use App\Models\MySlot;
@@ -20,8 +22,10 @@ final class DeleteGroup
     {
         DB::transaction(function () use ($group): void {
             CashEntry::query()->whereIn('round_id', HuiRound::query()->where('group_id', $group->id)->select('id'))->delete();
+            HostEntry::query()->whereIn('round_id', HuiRound::query()->where('group_id', $group->id)->select('id'))->delete();
             HuiRound::query()->where('group_id', $group->id)->delete();
             MySlot::query()->where('group_id', $group->id)->delete();
+            HostSlot::query()->where('group_id', $group->id)->delete();
             $group->delete();
         });
     }

@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Models;
 
-use App\Enums\HuiGroupStatus;
 use App\Models\Concerns\OwnedByUser;
 use Database\Factories\MemberFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -40,15 +38,12 @@ class Member extends Model
     }
 
     /**
-     * Hụi viên đang giữ tay ở một dây đang chạy hay không.
+     * Hụi viên đã từng giữ tay ở dây nào chưa (kể cả dây đã kết thúc).
      *
      * Bỏ global scope vì truy vấn đã giới hạn theo chính hụi viên này.
      */
-    public function holdsSlotInRunningGroup(): bool
+    public function hasHeldSlot(): bool
     {
-        return $this->hostSlots()
-            ->withoutGlobalScope(self::OWNER_SCOPE)
-            ->whereHas('group', fn (Builder $query) => $query->withoutGlobalScope(HuiGroup::OWNER_SCOPE)->where('status', HuiGroupStatus::DangChay))
-            ->exists();
+        return $this->hostSlots()->withoutGlobalScope(self::OWNER_SCOPE)->exists();
     }
 }

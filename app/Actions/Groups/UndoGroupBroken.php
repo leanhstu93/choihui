@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Groups;
 
+use App\Actions\Host\SyncHostEntries;
 use App\Actions\Rounds\SyncCashEntries;
 use App\Enums\HuiGroupStatus;
 use App\Exceptions\HuiActionException;
@@ -15,7 +16,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class UndoGroupBroken
 {
-    public function __construct(private SyncCashEntries $syncCashEntries) {}
+    public function __construct(private SyncCashEntries $syncCashEntries, private SyncHostEntries $syncHostEntries) {}
 
     public function handle(HuiGroup $group): HuiGroup
     {
@@ -26,6 +27,7 @@ final class UndoGroupBroken
         return DB::transaction(function () use ($group): HuiGroup {
             $group->update(['status' => HuiGroupStatus::DangChay, 'broken_round_no' => null]);
             $this->syncCashEntries->handle($group);
+            $this->syncHostEntries->handle($group);
 
             return $group;
         });

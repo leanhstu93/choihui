@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Groups;
 
+use App\Actions\Host\SyncHostEntries;
 use App\Actions\Rounds\SyncCashEntries;
 use App\Enums\HuiGroupStatus;
 use App\Exceptions\HuiActionException;
@@ -16,7 +17,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class MarkGroupBroken
 {
-    public function __construct(private SyncCashEntries $syncCashEntries) {}
+    public function __construct(private SyncCashEntries $syncCashEntries, private SyncHostEntries $syncHostEntries) {}
 
     public function handle(HuiGroup $group, int $brokenRoundNo): HuiGroup
     {
@@ -27,6 +28,7 @@ final class MarkGroupBroken
         return DB::transaction(function () use ($group, $brokenRoundNo): HuiGroup {
             $group->update(['status' => HuiGroupStatus::Be, 'broken_round_no' => $brokenRoundNo]);
             $this->syncCashEntries->handle($group);
+            $this->syncHostEntries->handle($group);
 
             return $group;
         });

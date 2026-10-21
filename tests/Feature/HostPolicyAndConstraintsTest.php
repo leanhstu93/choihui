@@ -44,18 +44,19 @@ test('owners may act on host rows and other users may not', function (Closure $m
     'host entry' => [fn (User $owner) => HostEntry::factory()->for(HostSlot::factory()->for(HuiGroup::factory()->for($owner), 'group'))->create(), ['view', 'update']],
 ]);
 
-test('a member holding a slot in a running group cannot be deleted', function () {
+test('a member who has held a slot cannot be deleted, even after the group ends', function () {
     $this->actingAs($owner = User::factory()->host()->create());
     $hostSlot = HostSlot::factory()->for(HuiGroup::factory()->for($owner), 'group')->create();
 
     $response = Gate::forUser($owner)->inspect('delete', $hostSlot->member);
 
     expect($response->denied())->toBeTrue()
-        ->and($response->message())->toBe('Hụi viên đang giữ tay ở dây đang chạy nên không thể xóa.');
+        ->and($response->message())->toBe('Hụi viên đã giữ tay trong dây nên không thể xóa.');
 
     $hostSlot->group->forceFill(['status' => HuiGroupStatus::KetThuc])->save();
 
-    expect(Gate::forUser($owner)->allows('delete', $hostSlot->member))->toBeTrue();
+    expect(Gate::forUser($owner)->allows('delete', $hostSlot->member))->toBeFalse()
+        ->and(Gate::forUser($owner)->allows('delete', Member::factory()->for($owner)->create()))->toBeTrue();
 });
 
 test('a slot that has already won cannot change holder', function () {

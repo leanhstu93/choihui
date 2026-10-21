@@ -27,7 +27,7 @@ class MemberPolicy
     }
 
     /**
-     * Không cho xóa hụi viên đang giữ tay ở dây đang chạy (CH-02).
+     * Không cho xóa hụi viên đã từng giữ tay, để các dây cũ còn đủ lịch sử (CH-02).
      */
     public function delete(User $user, Member $member): Response
     {
@@ -35,8 +35,8 @@ class MemberPolicy
             return Response::denyAsNotFound();
         }
 
-        return $member->holdsSlotInRunningGroup()
-            ? Response::deny('Hụi viên đang giữ tay ở dây đang chạy nên không thể xóa.')
+        return $member->hasHeldSlot()
+            ? Response::deny('Hụi viên đã giữ tay trong dây nên không thể xóa.')
             : Response::allow();
     }
 }

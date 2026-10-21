@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Actions\Groups\CreateGroup;
+use App\Actions\Host\CreateHostGroup;
 use App\Models\HuiGroup;
+use App\Models\Member;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -68,4 +70,27 @@ function createHuiGroup(array $attributes = [], array $slotLabels = ['Tay 1']): 
         'start_date' => '2026-01-05',
         'host_name' => 'Cô Hoa',
     ], $attributes), $slotLabels);
+}
+
+/**
+ * Tạo một dây chủ hụi qua Action thật cho chủ hụi đang đăng nhập (mặc định N = 10,
+ * M = 1.000.000). Mỗi tay một hụi viên mới tên "Hụi viên 1".."Hụi viên N".
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function createHostGroup(array $attributes = []): HuiGroup
+{
+    $attributes = array_merge([
+        'name' => 'Hụi 1tr nhà mình',
+        'face_value' => 1_000_000,
+        'total_slots' => 10,
+        'start_date' => '2026-01-05',
+    ], $attributes);
+
+    $memberIds = array_map(
+        fn (int $slotNo): string => Member::create(['name' => "Hụi viên {$slotNo}"])->id,
+        range(1, $attributes['total_slots']),
+    );
+
+    return app(CreateHostGroup::class)->handle($attributes, $memberIds);
 }
