@@ -28,6 +28,9 @@ new class extends Component
 
             <div x-show="open" x-on:click.outside="open = false" x-cloak
                  class="absolute right-0 mt-2 w-44 rounded-lg bg-white text-gray-800 shadow-lg ring-1 ring-black/5 py-1">
+                @if (auth()->user()->isAdmin())
+                    <a href="{{ route('admin.dashboard') }}" wire:navigate class="block px-4 py-2 text-sm hover:bg-gray-50">Quản trị</a>
+                @endif
                 <a href="{{ route('settings') }}" wire:navigate class="block px-4 py-2 text-sm hover:bg-gray-50">Cài đặt</a>
                 <button wire:click="logout" class="block w-full text-start px-4 py-2 text-sm hover:bg-gray-50">Đăng xuất</button>
             </div>

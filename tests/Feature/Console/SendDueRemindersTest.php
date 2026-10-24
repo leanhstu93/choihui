@@ -125,3 +125,12 @@ test('the reminder is scheduled daily at 7am Vietnam time', function () {
         ->and($event->expression)->toBe('0 7 * * *')
         ->and($event->timezone)->toBe('Asia/Ho_Chi_Minh');
 });
+
+test('locked accounts receive no reminders', function () {
+    $user = User::factory()->locked()->create(['reminder_days_before' => 3]);
+    groupDueOn($user, '2026-03-08');
+
+    $this->artisan('hui:send-due-reminders', ['--date' => '2026-03-05'])->assertSuccessful();
+
+    Mail::assertNothingSent();
+});

@@ -3,6 +3,11 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\BackupDownloadController;
+use App\Livewire\Admin\Dashboard as AdminDashboard;
+use App\Livewire\Admin\GroupShow as AdminGroupShow;
+use App\Livewire\Admin\LogIndex as AdminLogIndex;
+use App\Livewire\Admin\UserIndex as AdminUserIndex;
+use App\Livewire\Admin\UserShow as AdminUserShow;
 use App\Livewire\Dashboard;
 use App\Livewire\Groups\GroupForm;
 use App\Livewire\Groups\GroupIndex;
@@ -26,7 +31,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : view('welcome'))->name('home');
 
 // SEO: sinh theo APP_URL để đổi tên miền không phải sửa file.
-Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nSitemap: ".url('sitemap.xml')."\n")
+Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /quan-tri\nSitemap: ".url('sitemap.xml')."\n")
     ->header('Content-Type', 'text/plain; charset=UTF-8'))->name('robots');
 Route::view('chinh-sach', 'privacy')->name('privacy');
 Route::get('sitemap.xml', fn () => response()->view('sitemap')->header('Content-Type', 'application/xml; charset=UTF-8'))->name('sitemap');
@@ -61,6 +66,16 @@ Route::middleware('auth')->group(function () {
             Route::get('members', MemberIndex::class)->name('members.index');
             Route::get('members/{member}', MemberShow::class)->name('members.show');
         });
+
+        // Trang quản trị (document/05-quan-tri.md): chỉ email trong ADMIN_EMAILS, còn lại 404.
+        Route::middleware('admin')->prefix('quan-tri')->name('admin.')->group(function () {
+            Route::get('/', AdminDashboard::class)->name('dashboard');
+            Route::get('users', AdminUserIndex::class)->name('users.index');
+            Route::get('users/{user}', AdminUserShow::class)->name('users.show');
+            Route::get('groups/{groupId}', AdminGroupShow::class)->name('groups.show');
+            Route::get('logs', AdminLogIndex::class)->name('logs');
+        });
+
         Route::get('settings', SettingsPage::class)->name('settings');
         Route::get('settings/backup', BackupDownloadController::class)->middleware('role:hui_vien')->name('settings.backup');
     });

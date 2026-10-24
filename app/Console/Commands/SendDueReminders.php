@@ -33,6 +33,7 @@ class SendDueReminders extends Command
 
         User::query()
             ->where('reminder_days_before', '>', 0)
+            ->whereNull('locked_at')
             ->where(fn ($query) => $query->whereNull('last_reminded_on')->orWhere('last_reminded_on', '<', $today->format('Y-m-d')))
             ->lazyById()
             ->each(function (User $user) use ($upcomingPayments, $today, &$sentCount): void {

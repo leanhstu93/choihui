@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Providers;
 
 use App\Http\Middleware\EnsurePinUnlocked;
+use App\Http\Middleware\EnsureUserIsAdmin;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Number;
@@ -26,8 +27,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Khóa PIN áp dụng cả cho các thao tác Livewire trên trang đang mở.
-        Livewire::addPersistentMiddleware([EnsurePinUnlocked::class]);
+        // Khóa PIN và quyền quản trị áp dụng cả cho các thao tác Livewire trên trang đang mở.
+        Livewire::addPersistentMiddleware([EnsurePinUnlocked::class, EnsureUserIsAdmin::class]);
 
         Number::useLocale('vi');
         Carbon::setLocale('vi');

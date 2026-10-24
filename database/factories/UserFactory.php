@@ -47,6 +47,16 @@ class UserFactory extends Factory
     }
 
     /**
+     * Tài khoản bị quản trị viên khóa (document/05-quan-tri.md Q6).
+     */
+    public function locked(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'locked_at' => now(),
+        ]);
+    }
+
+    /**
      * Indicate that the model's email address should be unverified.
      */
     public function unverified(): static

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Forms;
 
+use App\Models\User;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
@@ -41,6 +42,14 @@ class LoginForm extends Form
         }
 
         RateLimiter::clear($this->throttleKey());
+
+        if (Auth::user()?->isLocked()) {
+            Auth::guard('web')->logout();
+
+            throw ValidationException::withMessages([
+                'form.email' => User::LOCKED_MESSAGE,
+            ]);
+        }
     }
 
     /**

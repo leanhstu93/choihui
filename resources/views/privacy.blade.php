@@ -19,7 +19,7 @@
         <main class="mx-auto max-w-2xl space-y-6 px-4 py-10 leading-relaxed text-gray-700 [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-gray-900 [&_li]:ml-5 [&_li]:list-disc">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">Chính sách bảo mật</h1>
-                <p class="mt-1 text-sm text-gray-500">Cập nhật ngày 21/10/2026</p>
+                <p class="mt-1 text-sm text-gray-500">Cập nhật ngày 23/10/2026</p>
             </div>
 
             <p>Sổ hụi là công cụ ghi sổ và tính toán hụi. Chúng tôi không giữ tiền, không tổ chức hụi và không bán dữ liệu của bạn.</p>
@@ -40,6 +40,7 @@
                     <li>Gửi email nhắc hạn và email đặt lại mật khẩu.</li>
                 </ul>
                 <p class="mt-2">Mỗi tài khoản chỉ xem được dữ liệu của chính mình. Chúng tôi không dùng dữ liệu sổ hụi cho quảng cáo.</p>
+                <p class="mt-2"><strong>Quản trị viên</strong> của Sổ hụi có thể xem tài khoản và sổ hụi của bạn để hỗ trợ khi bạn báo lỗi, xử lý tài khoản vi phạm và vận hành trang web. Quản trị viên chỉ xem, không sửa sổ hụi của bạn, và không biết mật khẩu hay mã PIN của bạn. Mọi lần xem đều được ghi lại.</p>
             </section>
 
             <section>
