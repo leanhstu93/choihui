@@ -24,7 +24,7 @@
                 <div class="min-w-0 text-sm">
                     <div class="truncate font-semibold">{{ $row['group']->name }} · Kỳ {{ $row['round']->round_no }}</div>
                     <div @class(['text-red-700 font-medium' => $row['isOverdue'], 'text-gray-500' => ! $row['isOverdue']])>
-                        {{ $row['isOverdue'] ? 'Quá hạn · ' : '' }}Hạn {{ $row['dueDate']->format('d/m/Y') }}
+                        {{ $row['isOverdue'] ? 'Quá hạn · ' : '' }}Hạn {{ $row['dueDate']->format('d/m/Y') }}{{ $row['group']->lunarSuffix($row['dueDate']) }}
                     </div>
                 </div>
                 <div class="shrink-0 text-right text-sm">
@@ -75,7 +75,7 @@
                         <a href="{{ route('host.rounds.show', $row['round']) }}" wire:navigate class="flex items-center justify-between gap-3 p-3 text-sm">
                             <div class="min-w-0">
                                 <div class="truncate font-medium">{{ $row['group']->name }} · Kỳ {{ $row['round']->round_no }}</div>
-                                <div class="text-gray-500">Mở @date($row['round']->open_date)</div>
+                                <div class="text-gray-500">Mở @date($row['round']->open_date){{ $row['group']->lunarSuffix($row['round']->open_date) }}</div>
                             </div>
                             <span class="shrink-0 rounded-lg border border-gray-300 px-3 py-1.5 text-xs">Nhập kết quả</span>
                         </a>

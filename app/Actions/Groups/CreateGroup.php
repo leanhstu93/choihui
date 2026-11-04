@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\DB;
 final class CreateGroup
 {
     /**
-     * @param  array{name: string, face_value: int, total_slots: int, start_date: string, host_name: string, host_phone?: string|null, due_offset_days?: int, commission_amount?: int, note?: string|null, type?: string}  $attributes
+     * @param  array{name: string, face_value: int, total_slots: int, start_date: string, frequency?: string, host_name: string, host_phone?: string|null, due_offset_days?: int, commission_amount?: int, note?: string|null, type?: string}  $attributes
      * @param  list<string>  $slotLabels
      */
     public function handle(array $attributes, array $slotLabels): HuiGroup
@@ -36,7 +36,7 @@ final class CreateGroup
                 $group->slots()->create(['label' => $label]);
             }
 
-            $openDates = HuiSchedule::openDates(new DateTimeImmutable($group->start_date->toDateString()), $group->total_slots);
+            $openDates = HuiSchedule::openDates(new DateTimeImmutable($group->start_date->toDateString()), $group->total_slots, $group->frequency);
 
             foreach ($openDates as $roundNo => $openDate) {
                 $group->rounds()->create(['round_no' => $roundNo, 'open_date' => $openDate->format('Y-m-d')]);

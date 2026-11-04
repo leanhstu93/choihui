@@ -7,7 +7,7 @@ Bạn có **{{ count($payments) }} khoản hụi** cần đóng, tổng **{{ num
 | Hạn đóng | Dây hụi | Kỳ · Tay | Số tiền |
 |:--|:--|:--|--:|
 @foreach ($payments as $payment)
-| {{ $payment->dueDate->format('d/m/Y') }}{{ $payment->isOverdue($today) ? ' (quá hạn)' : '' }} | {{ $payment->groupName }} | Kỳ {{ $payment->roundNo }} · {{ $payment->slotLabel }} | {{ $payment->isEstimate ? '~' : '' }}{{ number_format($payment->amount, 0, ',', '.') }} đ |
+| {{ $payment->dueDate->format('d/m/Y') }}{{ $payment->lunarSuffix }}{{ $payment->isOverdue($today) ? ' (quá hạn)' : '' }} | {{ $payment->groupName }} | Kỳ {{ $payment->roundNo }} · {{ $payment->slotLabel }} | {{ $payment->isEstimate ? '~' : '' }}{{ number_format($payment->amount, 0, ',', '.') }} đ |
 @endforeach
 </x-mail::table>
 

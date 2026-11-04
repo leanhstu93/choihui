@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\DB;
 final class CreateHostGroup
 {
     /**
-     * @param  array{name: string, face_value: int, total_slots: int, start_date: string, due_offset_days?: int, commission_amount?: int, note?: string|null}  $attributes
+     * @param  array{name: string, face_value: int, total_slots: int, start_date: string, frequency?: string, due_offset_days?: int, commission_amount?: int, note?: string|null}  $attributes
      * @param  list<string>  $memberIds  Hụi viên giữ tay 1..N, theo thứ tự.
      */
     public function handle(array $attributes, array $memberIds): HuiGroup
@@ -41,7 +41,7 @@ final class CreateHostGroup
                 $group->hostSlots()->create(['slot_no' => $index + 1, 'member_id' => $memberId]);
             }
 
-            $openDates = HuiSchedule::openDates(new DateTimeImmutable($group->start_date->toDateString()), $group->total_slots);
+            $openDates = HuiSchedule::openDates(new DateTimeImmutable($group->start_date->toDateString()), $group->total_slots, $group->frequency);
 
             foreach ($openDates as $roundNo => $openDate) {
                 $group->rounds()->create(['round_no' => $roundNo, 'open_date' => $openDate->format('Y-m-d')]);

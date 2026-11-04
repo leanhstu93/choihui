@@ -22,7 +22,7 @@
         @php $isOverdue = $payments->first()->isOverdue($today); @endphp
         <section wire:key="due-{{ $date }}">
             <h2 @class(['mb-2 text-sm font-semibold', 'text-red-700' => $isOverdue, 'text-gray-600' => ! $isOverdue])>
-                {{ $isOverdue ? 'Quá hạn · ' : '' }}Hạn {{ \Illuminate\Support\Carbon::parse($date)->format('d/m/Y') }}
+                {{ $isOverdue ? 'Quá hạn · ' : '' }}Hạn {{ \Illuminate\Support\Carbon::parse($date)->format('d/m/Y') }}{{ $payments->firstWhere('lunarSuffix', '!=', '')?->lunarSuffix }}
                 @if ($date === $today->format('Y-m-d')) · hôm nay @endif
             </h2>
             <ul class="divide-y divide-gray-100 rounded-xl bg-white shadow-sm">

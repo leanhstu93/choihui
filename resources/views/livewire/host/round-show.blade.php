@@ -16,7 +16,7 @@
         <a href="{{ route('host.groups.show', $group) }}" wire:navigate class="text-emerald-700" aria-label="Quay lại">&larr;</a>
         <div>
             <h1 class="text-xl font-semibold">Kỳ {{ $round->round_no }}/{{ $group->total_slots }}</h1>
-            <p class="text-sm text-gray-500">{{ $group->name }} · mở @date($round->open_date) · hạn đóng {{ $dueDate->format('d/m/Y') }}</p>
+            <p class="text-sm text-gray-500">{{ $group->name }} · mở @date($round->open_date){{ $group->lunarSuffix($round->open_date) }} · hạn đóng {{ $dueDate->format('d/m/Y') }}{{ $group->lunarSuffix($dueDate) }}</p>
         </div>
     </div>
 

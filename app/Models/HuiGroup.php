@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Domain\LunarCalendar;
 use App\Enums\HuiFrequency;
 use App\Enums\HuiGroupStatus;
 use App\Enums\HuiGroupType;
 use App\Models\Concerns\OwnedByUser;
 use Database\Factories\HuiGroupFactory;
+use DateTimeInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
@@ -76,6 +78,22 @@ class HuiGroup extends Model
             'status' => HuiGroupStatus::class,
             'broken_round_no' => 'integer',
         ];
+    }
+
+    /**
+     * Ngày âm của một ngày thuộc dây âm lịch, ví dụ "15/10 ÂL"; dây dương trả chuỗi rỗng.
+     */
+    public function lunarLabel(DateTimeInterface $date): string
+    {
+        return $this->frequency->isLunar() ? LunarCalendar::fromSolar($date)->label() : '';
+    }
+
+    /**
+     * Phần ghi kèm sau ngày dương, ví dụ " (15/10 ÂL)"; dây dương trả chuỗi rỗng.
+     */
+    public function lunarSuffix(DateTimeInterface $date): string
+    {
+        return $this->frequency->isLunar() ? " ({$this->lunarLabel($date)})" : '';
     }
 
     /**

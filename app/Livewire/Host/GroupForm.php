@@ -11,6 +11,7 @@ use App\Exceptions\ConfirmationRequiredException;
 use App\Http\Requests\StoreHostGroupRequest;
 use App\Http\Requests\StoreMemberRequest;
 use App\Http\Requests\UpdateHuiGroupRequest;
+use App\Livewire\Concerns\PicksLunarStartDate;
 use App\Livewire\Concerns\SuggestsGroupAmounts;
 use App\Models\HuiGroup;
 use App\Models\Member;
@@ -29,7 +30,7 @@ use Livewire\Component;
 #[Layout('layouts.app')]
 class GroupForm extends Component
 {
-    use SuggestsGroupAmounts;
+    use PicksLunarStartDate, SuggestsGroupAmounts;
 
     #[Locked]
     public ?HuiGroup $group = null;
@@ -74,6 +75,7 @@ class GroupForm extends Component
         }
 
         $this->startDate = now()->toDateString();
+        $this->fillLunarDefaults();
     }
 
     /**
@@ -122,7 +124,8 @@ class GroupForm extends Component
             'name' => trim($this->name),
             'face_value' => $this->faceValue,
             'total_slots' => $this->totalSlots,
-            'start_date' => $this->startDate,
+            'frequency' => $this->frequency,
+            'start_date' => $this->resolvedStartDate(),
             'due_offset_days' => $this->dueOffsetDays,
             'commission_amount' => $this->commissionAmount,
             'note' => trim($this->note) ?: null,

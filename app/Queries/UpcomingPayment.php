@@ -21,6 +21,7 @@ final readonly class UpcomingPayment
         public int $amount,
         public bool $isEstimate,
         public ?string $cashEntryId,
+        public string $lunarSuffix = '',
     ) {}
 
     public function isOverdue(DateTimeImmutable $today): bool

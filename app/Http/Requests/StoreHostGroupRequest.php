@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\HuiFrequency;
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Contracts\Validation\Validator as ValidatorContract;
@@ -70,6 +71,7 @@ class StoreHostGroupRequest extends FormRequest
             'name' => ['required', 'string', 'max:255'],
             'face_value' => ['required', 'integer', 'min:1', 'max:100000000000'],
             'total_slots' => ['required', 'integer', 'min:2', 'max:200'],
+            'frequency' => ['sometimes', Rule::enum(HuiFrequency::class)],
             'start_date' => ['required', 'date'],
             'due_offset_days' => ['sometimes', 'integer', 'min:0', 'max:60'],
             'commission_amount' => ['sometimes', 'integer', 'min:0'],

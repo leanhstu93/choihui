@@ -4,22 +4,28 @@ declare(strict_types=1);
 
 namespace App\Domain;
 
+use App\Enums\HuiFrequency;
 use DateTimeImmutable;
 use InvalidArgumentException;
 
 /**
- * Lịch các kỳ của một dây hụi chu kỳ tháng. PHP thuần.
+ * Lịch các kỳ của một dây hụi chu kỳ tháng dương hoặc tháng âm. PHP thuần.
  *
  * Ngày mở kỳ k luôn tính từ ngày bắt đầu (cộng k − 1 tháng, không tràn sang
  * tháng sau), không cộng dồn từ kỳ trước: bắt đầu 31/01 thì kỳ 2 là 28/02 và
- * kỳ 3 vẫn là 31/03.
+ * kỳ 3 vẫn là 31/03. Dây âm lịch làm tương tự với ngày âm (ngày 30 gặp tháng
+ * thiếu thì lùi về 29); tháng nhuận cũng là một kỳ.
  */
 final class HuiSchedule
 {
-    public static function openDate(DateTimeImmutable $startDate, int $roundNo): DateTimeImmutable
+    public static function openDate(DateTimeImmutable $startDate, int $roundNo, HuiFrequency $frequency = HuiFrequency::Thang): DateTimeImmutable
     {
         if ($roundNo < 1) {
             throw new InvalidArgumentException('Số thứ tự kỳ phải từ 1 trở lên.');
+        }
+
+        if ($frequency === HuiFrequency::ThangAm) {
+            return LunarCalendar::addMonths($startDate, $roundNo - 1);
         }
 
         $monthIndex = (int) $startDate->format('Y') * 12 + (int) $startDate->format('n') - 1 + ($roundNo - 1);
@@ -36,12 +42,12 @@ final class HuiSchedule
      *
      * @return array<int, DateTimeImmutable> round_no => ngày mở
      */
-    public static function openDates(DateTimeImmutable $startDate, int $totalSlots): array
+    public static function openDates(DateTimeImmutable $startDate, int $totalSlots, HuiFrequency $frequency = HuiFrequency::Thang): array
     {
         $dates = [];
 
         for ($roundNo = 1; $roundNo <= $totalSlots; $roundNo++) {
-            $dates[$roundNo] = self::openDate($startDate, $roundNo);
+            $dates[$roundNo] = self::openDate($startDate, $roundNo, $frequency);
         }
 
         return $dates;

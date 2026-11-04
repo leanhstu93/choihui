@@ -29,7 +29,10 @@
         <dl class="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
             <div><dt class="text-gray-500">Mệnh giá</dt><dd class="font-medium">@money($group->face_value)</dd></div>
             <div><dt class="text-gray-500">Số tay / kỳ</dt><dd class="font-medium">{{ $group->total_slots }}</dd></div>
-            <div><dt class="text-gray-500">Ngày mở kỳ 1</dt><dd class="font-medium">@date($group->start_date)</dd></div>
+            <div><dt class="text-gray-500">Ngày mở kỳ 1</dt><dd class="font-medium">@date($group->start_date){{ $group->lunarSuffix($group->start_date) }}</dd></div>
+            @if ($group->frequency->isLunar())
+                <div><dt class="text-gray-500">Chu kỳ</dt><dd class="font-medium">{{ $group->frequency->label() }}</dd></div>
+            @endif
             <div><dt class="text-gray-500">Tiền thảo</dt><dd class="font-medium">@money($group->commission_amount)</dd></div>
             <div><dt class="text-gray-500">Chủ hụi</dt><dd class="font-medium">{{ $group->host_name }} @if ($group->host_phone) · {{ $group->host_phone }} @endif</dd></div>
             <div><dt class="text-gray-500">Trạng thái</dt><dd class="font-medium">{{ $group->status->label() }}@if ($group->broken_round_no) (kỳ {{ $group->broken_round_no }})@endif</dd></div>
@@ -53,6 +56,9 @@
                    class="rounded-lg border p-2 text-xs {{ $stateClasses[$roundStates[$round->id]['key']] }}">
                     <div class="font-semibold">Kỳ {{ $round->round_no }}</div>
                     <div>@date($round->open_date)</div>
+                    @if ($group->frequency->isLunar())
+                        <div>{{ $group->lunarLabel($round->open_date) }}</div>
+                    @endif
                     <div class="mt-1">{{ $roundStates[$round->id]['label'] }}</div>
                 </a>
             @endforeach

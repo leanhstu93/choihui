@@ -77,7 +77,7 @@ final class UpcomingPayments
             if ($round->bid_amount !== null) {
                 foreach ($round->cashEntries as $entry) {
                     if ($entry->direction === CashDirection::Dong && $entry->status === CashEntryStatus::Chua) {
-                        $payments[] = new UpcomingPayment($group->id, $group->name, $round->id, $round->round_no, $entry->slot->label, $dueDate, $entry->amount_expected, false, $entry->id);
+                        $payments[] = new UpcomingPayment($group->id, $group->name, $round->id, $round->round_no, $entry->slot->label, $dueDate, $entry->amount_expected, false, $entry->id, $group->lunarSuffix($dueDate));
                     }
                 }
 
@@ -87,7 +87,7 @@ final class UpcomingPayments
             foreach ($group->slots as $slot) {
                 $wonRoundNo = $wonRoundBySlot[$slot->id] ?? null;
                 $amount = HuiCalculator::amountDue($round->round_no, $group->face_value, min($latestBid, $group->face_value), $wonRoundNo);
-                $payments[] = new UpcomingPayment($group->id, $group->name, $round->id, $round->round_no, $slot->label, $dueDate, $amount, true, null);
+                $payments[] = new UpcomingPayment($group->id, $group->name, $round->id, $round->round_no, $slot->label, $dueDate, $amount, true, null, $group->lunarSuffix($dueDate));
             }
         }
 

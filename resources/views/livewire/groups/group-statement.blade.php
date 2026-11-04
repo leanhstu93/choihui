@@ -36,7 +36,10 @@
             <dl class="mt-3 grid grid-cols-3 gap-x-4 gap-y-2 text-sm">
                 <div><dt class="text-xs text-gray-500">Mệnh giá</dt><dd class="font-medium">@money($group->face_value)</dd></div>
                 <div><dt class="text-xs text-gray-500">Số tay / kỳ</dt><dd class="font-medium">{{ $group->total_slots }}</dd></div>
-                <div><dt class="text-xs text-gray-500">Ngày mở kỳ 1</dt><dd class="font-medium">@date($group->start_date)</dd></div>
+                <div><dt class="text-xs text-gray-500">Ngày mở kỳ 1</dt><dd class="font-medium">@date($group->start_date){{ $group->lunarSuffix($group->start_date) }}</dd></div>
+                @if ($group->frequency->isLunar())
+                    <div><dt class="text-xs text-gray-500">Chu kỳ</dt><dd class="font-medium">{{ $group->frequency->label() }}</dd></div>
+                @endif
                 <div><dt class="text-xs text-gray-500">Chủ hụi</dt><dd class="font-medium">{{ $group->host_name }}</dd></div>
                 <div><dt class="text-xs text-gray-500">Tiền thảo</dt><dd class="font-medium">@money($group->commission_amount)</dd></div>
                 <div><dt class="text-xs text-gray-500">Trạng thái</dt><dd class="font-medium">{{ $group->status->label() }}@if ($group->broken_round_no) (kỳ {{ $group->broken_round_no }})@endif</dd></div>
@@ -63,7 +66,7 @@
                     @foreach ($group->rounds as $round)
                         <tr @class(['border-b border-gray-100 align-top', 'text-gray-400' => $isAfterBreak($round) || $round->bid_amount === null])>
                             <td class="py-1.5 pr-2 font-medium">{{ $round->round_no }}</td>
-                            <td class="py-1.5 pr-2">@date($round->open_date)</td>
+                            <td class="py-1.5 pr-2">@date($round->open_date)@if ($group->frequency->isLunar())<div class="text-xs text-gray-500">{{ $group->lunarLabel($round->open_date) }}</div>@endif</td>
                             <td class="py-1.5 pr-2 text-right">{{ $round->bid_amount === null ? '—' : number_format($round->bid_amount, 0, ',', '.') }}</td>
                             <td class="py-1.5 pr-2">
                                 @switch($round->winner_type)

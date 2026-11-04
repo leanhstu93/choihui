@@ -24,14 +24,7 @@
                 </x-field>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <x-field label="Ngày mở kỳ 1" name="start_date">
-                    <input id="start_date" type="date" wire:model="startDate" class="{{ $inputClass }}" @disabled($group) required>
-                </x-field>
-                <x-field label="Hạn đóng sau (ngày)" name="due_offset_days">
-                    <input id="due_offset_days" type="number" inputmode="numeric" min="0" step="1" wire:model="dueOffsetDays" class="{{ $inputClass }}">
-                </x-field>
-            </div>
+            @include('livewire.partials.group-start-date')
 
             <x-field label="Tiền thảo mỗi lần hốt" name="commission_amount" hint="Người hốt đưa lại cho mình, trừ thẳng vào tiền chi. Để 0 nếu không có.">
                 <x-money-input id="commission_amount" model="commissionAmount" />
