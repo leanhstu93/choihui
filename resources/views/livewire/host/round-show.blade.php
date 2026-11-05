@@ -108,7 +108,7 @@
                                     <x-money-input id="amount_actual" model="payAmount" />
                                 </x-field>
                                 <x-field label="Ngày" name="paid_date">
-                                    <input id="paid_date" type="date" wire:model="payDate" class="{{ $inputClass }}">
+                                    <x-date-input id="paid_date" model="payDate" />
                                 </x-field>
                             </div>
                             <x-field label="Ghi chú" name="note">

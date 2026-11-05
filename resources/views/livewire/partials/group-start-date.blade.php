@@ -43,7 +43,7 @@
 <div class="grid grid-cols-2 gap-3">
     @if (! $isLunar || $group)
         <x-field label="Ngày mở kỳ 1" name="start_date" :hint="$group?->frequency->isLunar() ? $group->frequency->label().' · '.$group->lunarLabel($group->start_date) : null">
-            <input id="start_date" type="date" wire:model="startDate" class="{{ $inputClass }}" @disabled($group) required>
+            <x-date-input id="start_date" model="startDate" :disabled="(bool) $group" required />
         </x-field>
     @endif
     <x-field label="Hạn đóng sau (ngày)" name="due_offset_days">

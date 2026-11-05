@@ -194,3 +194,26 @@ test('a slot from another group cannot be removed through this page', function (
 
     expect($otherSlot->fresh())->not->toBeNull();
 });
+
+test('date fields render as dd/mm/yyyy inputs', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(GroupForm::class)
+        ->assertSeeHtml('placeholder="dd/mm/yyyy"')
+        ->assertSeeHtml('x-data="dateInput(');
+});
+
+test('a date the browser could not parse is rejected, not treated as blank', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(GroupForm::class)
+        ->set('name', 'Hụi')
+        ->set('faceValue', 1_000_000)
+        ->set('totalSlots', 2)
+        ->set('hostName', 'Cô Hoa')
+        ->set('startDate', 'ngay-khong-hop-le')
+        ->call('save')
+        ->assertHasErrors(['start_date' => 'date']);
+
+    expect(HuiGroup::count())->toBe(0);
+});

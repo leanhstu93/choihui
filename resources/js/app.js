@@ -28,6 +28,87 @@ document.addEventListener('alpine:init', () => {
 });
 
 /**
+ * Ô nhập ngày: hiển thị dd/mm/yyyy khi gõ, đồng bộ Y-m-d với Livewire. Ngày gõ dở
+ * hoặc không có thật gửi một giá trị không phải ngày để rule `date` của server báo
+ * lỗi, thay vì bị coi như bỏ trống. Dùng qua component Blade <x-date-input>.
+ */
+const INVALID_DATE = 'ngay-khong-hop-le';
+
+const isoToDisplay = (value) => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value ?? '');
+
+    return match ? `${match[3]}/${match[2]}/${match[1]}` : '';
+};
+
+const displayToIso = (text) => {
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(text);
+
+    if (! match) {
+        return INVALID_DATE;
+    }
+
+    const [day, month, year] = match.slice(1).map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    const exists = date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+
+    return exists ? `${match[3]}-${match[2]}-${match[1]}` : INVALID_DATE;
+};
+
+// Tự thêm dấu "/"; gõ "5/" hiểu là "05/" để nhập được cả ngày một chữ số.
+const maskDate = (raw) => {
+    const cleaned = raw.replace(/[^\d/]/g, '');
+    const parts = cleaned.split('/');
+    const digits = parts
+        .map((part, index) => (index < 2 && index < parts.length - 1 && part.length === 1 ? `0${part}` : part))
+        .join('')
+        .slice(0, 8);
+    const masked = [digits.slice(0, 2), digits.slice(2, 4), digits.slice(4)].filter(Boolean).join('/');
+
+    return cleaned.endsWith('/') && (digits.length === 2 || digits.length === 4) ? `${masked}/` : masked;
+};
+
+document.addEventListener('alpine:init', () => {
+    window.Alpine.data('dateInput', (value) => ({
+        value,
+        display: '',
+
+        init() {
+            this.display = isoToDisplay(this.value);
+            this.$watch('value', (newValue) => {
+                if (newValue !== INVALID_DATE) {
+                    this.display = isoToDisplay(newValue);
+                }
+            });
+        },
+
+        get pickerValue() {
+            return this.value === INVALID_DATE ? '' : (this.value ?? '');
+        },
+
+        onInput(event) {
+            this.display = maskDate(event.target.value);
+            event.target.value = this.display;
+            this.value = this.display === '' ? '' : displayToIso(this.display);
+        },
+
+        onPick(event) {
+            this.value = event.target.value;
+        },
+
+        openPicker() {
+            const picker = this.$refs.picker;
+
+            try {
+                picker.showPicker();
+            } catch {
+                picker.focus();
+                picker.click();
+            }
+        },
+    }));
+});
+
+/**
  * Xuất một phần trang (x-ref="capture") thành ảnh PNG. Trên điện thoại mở khung
  * Chia sẻ (Zalo, Messenger, Lưu ảnh...); nếu trình duyệt không hỗ trợ thì tải file về.
  */
