@@ -14,6 +14,7 @@ use App\Enums\WinnerType;
 use App\Exceptions\HuiActionException;
 use App\Models\CashEntry;
 use App\Models\GoldItem;
+use App\Models\GoldItemPhoto;
 use App\Models\GoldPrice;
 use App\Models\GoldSale;
 use App\Models\HuiGroup;
@@ -24,6 +25,7 @@ use App\Models\User;
 use App\Queries\UserBackup;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -63,7 +65,9 @@ final class RestoreBackup
             $this->validateGold($gold);
         }
 
-        return DB::transaction(function () use ($user, $data, $gold): array {
+        $orphanedPhotos = [];
+
+        $stats = DB::transaction(function () use ($user, $data, $gold, &$orphanedPhotos): array {
             $this->deleteExistingData($user);
 
             $stats = ['groups' => 0, 'rounds' => 0, 'entries' => 0, 'gold_items' => 0];
@@ -73,7 +77,7 @@ final class RestoreBackup
             }
 
             if ($gold !== null) {
-                $this->deleteExistingGold($user);
+                $orphanedPhotos = $this->deleteExistingGold($user);
                 $this->restoreGold($user, $gold, $stats);
             }
 
@@ -87,6 +91,10 @@ final class RestoreBackup
 
             return $stats;
         });
+
+        Storage::disk(GoldItemPhoto::DISK)->delete($orphanedPhotos);
+
+        return $stats;
     }
 
     /**
@@ -251,11 +259,24 @@ final class RestoreBackup
         }
     }
 
-    private function deleteExistingGold(User $user): void
+    /**
+     * Ảnh không nằm trong file sao lưu nên mất theo món vàng cũ (document/06-vang.md V13).
+     *
+     * @return array<int, string> Đường dẫn file ảnh cần xóa sau khi transaction xong.
+     */
+    private function deleteExistingGold(User $user): array
     {
+        $photoPaths = GoldItemPhoto::query()
+            ->withoutGlobalScope(GoldItemPhoto::OWNER_SCOPE)
+            ->where('user_id', $user->id)
+            ->pluck('path')
+            ->all();
+
         foreach ([GoldSale::class, GoldItem::class, GoldPrice::class] as $modelClass) {
             $modelClass::query()->withoutGlobalScope(GoldItem::OWNER_SCOPE)->where('user_id', $user->id)->delete();
         }
+
+        return $photoPaths;
     }
 
     /**

@@ -116,7 +116,7 @@ class GoldItemShow extends Component
     {
         /** @var User $user */
         $user = Auth::user();
-        $this->goldItem->load(['sales' => fn ($query) => $query->orderByDesc('sold_on')->orderByDesc('id')]);
+        $this->goldItem->load(['sales' => fn ($query) => $query->orderByDesc('sold_on')->orderByDesc('id'), 'photos' => fn ($query) => $query->oldest('id')]);
 
         return view('livewire.gold.gold-item-show', ['position' => $portfolio->position($user, $this->goldItem)]);
     }

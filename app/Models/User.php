@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -38,6 +39,16 @@ class User extends Authenticatable
         'reminder_days_before' => 3,
         'role' => 'hui_vien',
     ];
+
+    /**
+     * Xóa tài khoản xóa luôn ảnh vàng; dòng dữ liệu đã có cascade nhưng file thì không.
+     */
+    protected static function booted(): void
+    {
+        static::deleted(function (User $user): void {
+            Storage::disk(GoldItemPhoto::DISK)->deleteDirectory("gold/{$user->id}");
+        });
+    }
 
     /**
      * Get the attributes that should be cast.

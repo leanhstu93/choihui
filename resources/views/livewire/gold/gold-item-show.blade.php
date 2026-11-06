@@ -44,6 +44,16 @@
         @endif
     </section>
 
+    @if ($goldItem->photos->isNotEmpty())
+        <section class="grid grid-cols-3 gap-2">
+            @foreach ($goldItem->photos as $photo)
+                <a href="{{ route('gold.photos.show', $photo) }}" target="_blank" rel="noopener" wire:key="photo-{{ $photo->id }}">
+                    <img src="{{ route('gold.photos.show', $photo) }}" alt="Ảnh món vàng" loading="lazy" class="aspect-square w-full rounded-lg bg-gray-200 object-cover">
+                </a>
+            @endforeach
+        </section>
+    @endif
+
     @if ($showSell)
         <form wire:submit="sell" class="space-y-3 rounded-xl bg-white p-4 shadow-sm">
             <h2 class="font-semibold">Bán vàng</h2>

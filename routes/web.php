@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\BackupDownloadController;
+use App\Http\Controllers\GoldPhotoController;
 use App\Livewire\Admin\Dashboard as AdminDashboard;
 use App\Livewire\Admin\GroupShow as AdminGroupShow;
 use App\Livewire\Admin\LogIndex as AdminLogIndex;
@@ -87,6 +88,7 @@ Route::middleware('auth')->group(function () {
             Route::get('/', GoldIndex::class)->name('index');
             Route::get('gia', GoldPrices::class)->name('prices');
             Route::get('them', GoldItemForm::class)->name('create');
+            Route::get('anh/{goldItemPhoto}', GoldPhotoController::class)->name('photos.show');
             Route::get('{goldItem}', GoldItemShow::class)->name('show');
             Route::get('{goldItem}/sua', GoldItemForm::class)->name('edit');
         });

@@ -6,7 +6,56 @@ import { toBlob } from 'html-to-image';
  */
 const formatMoney = (value) => (value === null || value === undefined || value === '' ? '' : Number(value).toLocaleString('vi-VN'));
 
+const MAX_PHOTO_SIDE = 1600;
+
+/**
+ * Vẽ lại ảnh thành JPEG cạnh dài tối đa MAX_PHOTO_SIDE. Máy không đọc được ảnh thì gửi
+ * file gốc, server vẫn kiểm tra.
+ */
+const shrinkPhoto = async (file) => {
+    try {
+        const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        const scale = Math.min(1, MAX_PHOTO_SIDE / Math.max(bitmap.width, bitmap.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(bitmap.width * scale);
+        canvas.height = Math.round(bitmap.height * scale);
+
+        const context = canvas.getContext('2d');
+        context.fillStyle = '#fff';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+        bitmap.close();
+
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+
+        return blob === null ? file : new File([blob], 'photo.jpg', { type: 'image/jpeg' });
+    } catch {
+        return file;
+    }
+};
+
 document.addEventListener('alpine:init', () => {
+    // Thu nhỏ ảnh ngay trên máy trước khi gửi: nhẹ, không vướng giới hạn upload, bỏ GPS trong ảnh.
+    window.Alpine.data('photoPicker', () => ({
+        busy: false,
+        failed: false,
+
+        async pick(event) {
+            const files = await Promise.all([...event.target.files].map(shrinkPhoto));
+            event.target.value = '';
+
+            if (files.length === 0) {
+                return;
+            }
+
+            this.busy = true;
+            this.failed = false;
+            this.$wire.uploadMultiple('photos', files,
+                () => { this.busy = false; },
+                () => { this.busy = false; this.failed = true; });
+        },
+    }));
+
     window.Alpine.data('moneyInput', (value) => ({
         value,
         display: '',

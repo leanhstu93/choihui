@@ -28,12 +28,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $shop
  * @property string|null $note
  * @property-read Collection<int, GoldSale> $sales
+ * @property-read Collection<int, GoldItemPhoto> $photos
  */
 #[Fillable(['gold_type', 'name', 'weight_ly', 'cost_amount', 'bought_on', 'shop', 'note'])]
 class GoldItem extends Model
 {
     /** @use HasFactory<GoldItemFactory> */
     use HasFactory, HasUlids, OwnedByUser;
+
+    public const MAX_PHOTOS = 5;
 
     /**
      * @return array<string, string>
@@ -54,6 +57,14 @@ class GoldItem extends Model
     public function sales(): HasMany
     {
         return $this->hasMany(GoldSale::class);
+    }
+
+    /**
+     * @return HasMany<GoldItemPhoto, $this>
+     */
+    public function photos(): HasMany
+    {
+        return $this->hasMany(GoldItemPhoto::class);
     }
 
     /**

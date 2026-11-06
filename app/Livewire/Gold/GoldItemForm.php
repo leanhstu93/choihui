@@ -4,17 +4,23 @@ declare(strict_types=1);
 
 namespace App\Livewire\Gold;
 
+use App\Actions\Gold\AddGoldItemPhotos;
+use App\Actions\Gold\DeleteGoldItemPhoto;
 use App\Actions\Gold\SaveGoldItem;
 use App\Domain\GoldLedger;
 use App\Enums\GoldType;
 use App\Exceptions\HuiActionException;
 use App\Http\Requests\StoreGoldItemRequest;
+use App\Http\Requests\StoreGoldPhotosRequest;
 use App\Models\GoldItem;
+use App\Models\GoldItemPhoto;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 /**
  * Thêm hoặc sửa một món vàng (document/06-vang.md VG-01, VG-02).
@@ -23,6 +29,8 @@ use Livewire\Component;
 #[Title('Món vàng')]
 class GoldItemForm extends Component
 {
+    use WithFileUploads;
+
     #[Locked]
     public ?string $itemId = null;
 
@@ -39,6 +47,9 @@ class GoldItemForm extends Component
     public string $shop = '';
 
     public string $note = '';
+
+    /** @var array<int, TemporaryUploadedFile> Ảnh mới, chưa lưu. */
+    public array $photos = [];
 
     public ?string $actionError = null;
 
@@ -61,7 +72,14 @@ class GoldItemForm extends Component
         }
     }
 
-    public function save(SaveGoldItem $saveGoldItem): void
+    public function deletePhoto(string $photoId, DeleteGoldItemPhoto $deleteGoldItemPhoto): void
+    {
+        $photo = GoldItemPhoto::query()->where('gold_item_id', $this->itemId)->findOrFail($photoId);
+        $this->authorize('delete', $photo);
+        $deleteGoldItemPhoto->handle($photo);
+    }
+
+    public function save(SaveGoldItem $saveGoldItem, AddGoldItemPhotos $addGoldItemPhotos): void
     {
         $item = $this->itemId === null ? null : GoldItem::query()->findOrFail($this->itemId);
 
@@ -70,6 +88,8 @@ class GoldItemForm extends Component
         }
 
         $this->actionError = null;
+        StoreGoldPhotosRequest::makeValidator(['photos' => $this->photos], $this->remainingPhotoSlots($item))->validate();
+
         $validated = StoreGoldItemRequest::makeValidator([
             'gold_type' => $this->goldType,
             'name' => trim($this->name) ?: null,
@@ -82,6 +102,7 @@ class GoldItemForm extends Component
 
         try {
             $saved = $saveGoldItem->handle($item, $validated);
+            $addGoldItemPhotos->handle($saved, $this->photos);
         } catch (HuiActionException $exception) {
             $this->actionError = $exception->getMessage();
 
@@ -93,6 +114,14 @@ class GoldItemForm extends Component
 
     public function render(): View
     {
-        return view('livewire.gold.gold-item-form', ['types' => GoldType::cases()]);
+        return view('livewire.gold.gold-item-form', [
+            'types' => GoldType::cases(),
+            'savedPhotos' => $this->itemId === null ? collect() : GoldItemPhoto::query()->where('gold_item_id', $this->itemId)->oldest('id')->get(),
+        ]);
+    }
+
+    private function remainingPhotoSlots(?GoldItem $item): int
+    {
+        return GoldItem::MAX_PHOTOS - ($item?->photos()->count() ?? 0);
     }
 }

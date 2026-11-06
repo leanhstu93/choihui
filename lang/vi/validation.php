@@ -166,6 +166,8 @@ return [
      */
     'attributes' => [
         'gold_type' => 'loại vàng',
+        'photos' => 'ảnh',
+        'photos.*' => 'ảnh',
         'weight_ly' => 'số chỉ',
         'cost_amount' => 'tiền đã trả',
         'bought_on' => 'ngày mua',
