@@ -12,6 +12,7 @@ use App\Livewire\Dashboard;
 use App\Livewire\Gold\GoldIndex;
 use App\Livewire\Gold\GoldItemForm;
 use App\Livewire\Gold\GoldItemShow;
+use App\Livewire\Gold\GoldPrices;
 use App\Livewire\Groups\GroupForm;
 use App\Livewire\Groups\GroupIndex;
 use App\Livewire\Groups\GroupShow;
@@ -43,10 +44,10 @@ Route::middleware('auth')->group(function () {
     Route::get('unlock', UnlockPage::class)->name('unlock');
 
     Route::middleware('pin')->group(function () {
-        Route::get('dashboard', Dashboard::class)->middleware('verified')->name('dashboard');
+        Route::get('dashboard', Dashboard::class)->middleware(['verified', 'area:hui'])->name('dashboard');
         Route::view('profile', 'profile')->name('profile');
 
-        Route::middleware('role:hui_vien')->group(function () {
+        Route::middleware(['role:hui_vien', 'area:hui'])->group(function () {
             Route::get('groups', GroupIndex::class)->name('groups.index');
             Route::get('groups/create', GroupForm::class)->name('groups.create');
             Route::get('groups/{group}', GroupShow::class)->name('groups.show');
@@ -57,7 +58,7 @@ Route::middleware('auth')->group(function () {
             Route::get('reports', ProfitReportPage::class)->name('reports');
         });
 
-        Route::middleware('role:chu_hui')->prefix('chu-hui')->name('host.')->group(function () {
+        Route::middleware(['role:chu_hui', 'area:hui'])->prefix('chu-hui')->name('host.')->group(function () {
             Route::get('/', HostDashboard::class)->name('dashboard');
             Route::get('reports', HostReportPage::class)->name('reports');
             Route::get('groups', HostGroupIndex::class)->name('groups.index');
@@ -80,8 +81,9 @@ Route::middleware('auth')->group(function () {
         });
 
         // Sổ vàng (document/06-vang.md): chung cho cả hai vai trò.
-        Route::prefix('vang')->name('gold.')->group(function () {
+        Route::middleware('area:vang')->prefix('vang')->name('gold.')->group(function () {
             Route::get('/', GoldIndex::class)->name('index');
+            Route::get('gia', GoldPrices::class)->name('prices');
             Route::get('them', GoldItemForm::class)->name('create');
             Route::get('{goldItem}', GoldItemShow::class)->name('show');
             Route::get('{goldItem}/sua', GoldItemForm::class)->name('edit');

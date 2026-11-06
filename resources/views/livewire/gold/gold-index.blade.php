@@ -12,35 +12,9 @@
     @if ($hasItems)
         <section class="grid grid-cols-2 gap-2">
             <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Đang giữ</div><div class="font-semibold">@chi($totals['weight']) chỉ</div><div class="text-xs text-gray-400">vốn @money($totals['cost'])</div></div>
-            <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Trị giá hiện tại</div><div class="font-semibold">@money($totals['value'])</div>@if ($totals['unpriced'] > 0)<div class="text-xs text-amber-700">chưa tính {{ $totals['unpriced'] }} món chưa có giá</div>@endif</div>
+            <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Trị giá hiện tại</div><div class="font-semibold">@money($totals['value'])</div>@if ($totals['unpriced'] > 0)<a href="{{ route('gold.prices') }}" wire:navigate class="text-xs text-amber-700 underline">chưa tính {{ $totals['unpriced'] }} món chưa có giá</a>@endif</div>
             <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Lời / lỗ tạm tính</div><div class="font-semibold {{ $profitClass($totals['unrealized']) }}">@money($totals['unrealized'])</div></div>
             <div class="rounded-xl bg-white p-3 shadow-sm"><div class="text-xs text-gray-500">Lời / lỗ đã chốt</div><div class="font-semibold {{ $profitClass($totals['realized']) }}">@money($totals['realized'])</div></div>
-        </section>
-    @endif
-
-    @if ($types !== [])
-        <section class="rounded-xl bg-white p-4 shadow-sm">
-            <h2 class="font-semibold">Giá tiệm mua lại, đồng / chỉ</h2>
-            <ul class="mt-2 space-y-3">
-                @foreach ($types as $row)
-                    <li wire:key="price-{{ $row['type']->value }}">
-                        <div class="flex items-baseline justify-between gap-2 text-sm">
-                            <label for="price-{{ $row['type']->value }}" class="font-medium">{{ $row['type']->label() }}</label>
-                            <span class="text-xs text-gray-500">
-                                @if ($row['weight'] > 0) @chi($row['weight']) chỉ · @endif
-                                @if ($row['price']) cập nhật @date($row['price']->priced_on) @else chưa có giá @endif
-                            </span>
-                        </div>
-                        <div class="mt-1 flex gap-2">
-                            <div class="flex-1"><x-money-input id="price-{{ $row['type']->value }}" model="prices.{{ $row['type']->value }}" /></div>
-                            <button type="button" wire:click="savePrice('{{ $row['type']->value }}')" class="rounded-lg border border-gray-300 px-4 py-2 text-sm">Lưu</button>
-                        </div>
-                    </li>
-                @endforeach
-            </ul>
-            @error('price_per_chi')
-                <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-            @enderror
         </section>
     @endif
 

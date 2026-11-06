@@ -76,7 +76,7 @@ final class GoldPortfolio
     }
 
     /**
-     * Các loại đang giữ, cộng các loại đã có giá, theo thứ tự trong enum.
+     * Mọi loại vàng theo thứ tự trong enum, để nhập được giá cả loại chưa mua.
      *
      * @param  Collection<int, GoldPosition>  $held
      * @param  Collection<string, GoldPrice>  $prices
@@ -87,14 +87,13 @@ final class GoldPortfolio
         $rows = [];
 
         foreach (GoldType::cases() as $type) {
-            $weight = (int) $held
-                ->filter(fn (GoldPosition $position) => $position->item->gold_type === $type)
-                ->sum('remainingWeight');
-            $price = $prices->get($type->value);
-
-            if ($weight > 0 || $price !== null) {
-                $rows[] = ['type' => $type, 'weight' => $weight, 'price' => $price];
-            }
+            $rows[] = [
+                'type' => $type,
+                'weight' => (int) $held
+                    ->filter(fn (GoldPosition $position) => $position->item->gold_type === $type)
+                    ->sum('remainingWeight'),
+                'price' => $prices->get($type->value),
+            ];
         }
 
         return $rows;

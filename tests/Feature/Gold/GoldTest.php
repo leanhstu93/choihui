@@ -11,6 +11,7 @@ use App\Exceptions\HuiActionException;
 use App\Livewire\Gold\GoldIndex;
 use App\Livewire\Gold\GoldItemForm;
 use App\Livewire\Gold\GoldItemShow;
+use App\Livewire\Gold\GoldPrices;
 use App\Models\GoldItem;
 use App\Models\GoldPrice;
 use App\Models\GoldSale;
@@ -26,16 +27,34 @@ use Livewire\Livewire;
  * Sổ vàng (document/06-vang.md).
  */
 
-test('both roles can open the gold ledger and see it in the navigation', function (User $user) {
+test('both roles get a gold area with its own navigation', function (User $user) {
     $this->actingAs($user);
 
     $this->get(route('gold.index'))->assertOk()
-        ->assertSeeInOrder(['Vàng', 'Cài đặt'])
-        ->assertSee('Chưa có món vàng nào');
+        ->assertSeeInOrder(['Sổ hụi', 'Sổ vàng', 'Chưa có món vàng nào', 'Tổng quan', 'Giá vàng', 'Cài đặt'])
+        ->assertDontSee('Dây hụi');
+
+    $this->get(route('gold.prices'))->assertOk()->assertSee('SJC')->assertSee('Vàng 10K');
 })->with([
     'member' => fn () => User::factory()->create(),
     'host' => fn () => User::factory()->host()->create(),
 ]);
+
+test('the hui area shows no gold navigation and the shared settings page keeps the current area', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get(route('groups.index'))->assertOk()
+        ->assertSee('Dây hụi')
+        ->assertDontSee(route('gold.prices'));
+    $this->get(route('settings'))->assertOk()->assertSee('Dây hụi');
+
+    $this->get(route('gold.index'))->assertOk();
+    $this->get(route('settings'))->assertOk()
+        ->assertSee(route('gold.prices'))
+        ->assertDontSee('Dây hụi');
+
+    $this->get(route('groups.index'))->assertOk()->assertDontSee(route('gold.prices'));
+});
 
 test('guests are sent to the login page', function () {
     $this->get(route('gold.index'))->assertRedirect(route('login'));
@@ -274,10 +293,10 @@ test('prices are saved per type and re-saving moves the date without a second ro
     GoldItem::factory()->for($user)->create(['gold_type' => GoldType::Sjc]);
 
     $this->travelTo('2026-11-01');
-    Livewire::test(GoldIndex::class)->set('prices.sjc', 16_000_000)->call('savePrice', 'sjc')->assertHasNoErrors();
+    Livewire::test(GoldPrices::class)->set('prices.sjc', 16_000_000)->call('savePrice', 'sjc')->assertHasNoErrors();
 
     $this->travelTo('2026-11-05');
-    Livewire::test(GoldIndex::class)->assertSet('prices.sjc', 16_000_000)->call('savePrice', 'sjc');
+    Livewire::test(GoldPrices::class)->assertSet('prices.sjc', 16_000_000)->call('savePrice', 'sjc');
 
     expect(GoldPrice::sole()->priced_on->toDateString())->toBe('2026-11-05');
 });
@@ -286,8 +305,8 @@ test('a price must be positive and of a known type', function () {
     $this->actingAs($user = User::factory()->create());
     GoldItem::factory()->for($user)->create(['gold_type' => GoldType::Sjc]);
 
-    Livewire::test(GoldIndex::class)->set('prices.sjc', null)->call('savePrice', 'sjc')->assertHasErrors('price_per_chi');
-    Livewire::test(GoldIndex::class)->set('prices.bac', 100)->call('savePrice', 'bac')->assertHasErrors('gold_type');
+    Livewire::test(GoldPrices::class)->set('prices.sjc', null)->call('savePrice', 'sjc')->assertHasErrors('price_per_chi');
+    Livewire::test(GoldPrices::class)->set('prices.bac', 100)->call('savePrice', 'bac')->assertHasErrors('gold_type');
 
     expect(GoldPrice::count())->toBe(0);
 });
