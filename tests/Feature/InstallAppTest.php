@@ -23,7 +23,7 @@ test('the app is installable: manifest and a service worker without caching', fu
     $manifest = json_decode((string) file_get_contents(public_path('manifest.webmanifest')), true);
     $serviceWorker = (string) file_get_contents(public_path('sw.js'));
 
-    expect($manifest)->toMatchArray(['display' => 'standalone', 'start_url' => '/dashboard'])
+    expect($manifest)->toMatchArray(['display' => 'standalone', 'start_url' => '/tong-tai-san'])
         ->and(collect($manifest['icons'])->pluck('sizes')->all())->toContain('192x192', '512x512')
         ->and($serviceWorker)->toContain("addEventListener('fetch'")
         ->and($serviceWorker)->not->toContain('caches.');

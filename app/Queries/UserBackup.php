@@ -11,6 +11,7 @@ use App\Models\GoldSale;
 use App\Models\HuiGroup;
 use App\Models\HuiRound;
 use App\Models\MySlot;
+use App\Models\NetWorthSnapshot;
 use App\Models\User;
 
 /**
@@ -81,6 +82,13 @@ final class UserBackup
                 ])->all(),
             ])->all(),
             'gold' => $this->exportGold($user),
+            'net_worth' => NetWorthSnapshot::query()
+                ->withoutGlobalScope(NetWorthSnapshot::OWNER_SCOPE)
+                ->where('user_id', $user->id)
+                ->orderBy('month')
+                ->get()
+                ->map(fn (NetWorthSnapshot $snapshot) => $snapshot->only(['month', 'assets', 'debts']))
+                ->all(),
         ];
     }
 

@@ -25,6 +25,7 @@ use App\Livewire\Host\ReportPage as HostReportPage;
 use App\Livewire\Host\RoundShow as HostRoundShow;
 use App\Livewire\Members\MemberIndex;
 use App\Livewire\Members\MemberShow;
+use App\Livewire\NetWorth\NetWorthPage;
 use App\Livewire\Reports\ProfitReportPage;
 use App\Livewire\Rounds\RoundShow;
 use App\Livewire\Settings\SettingsPage;
@@ -32,10 +33,10 @@ use App\Livewire\Settings\UnlockPage;
 use Illuminate\Support\Facades\Route;
 
 // Trang giới thiệu cho khách; người đã đăng nhập vào thẳng sổ của mình.
-Route::get('/', fn () => auth()->check() ? redirect()->route('dashboard') : view('welcome'))->name('home');
+Route::get('/', fn () => auth()->check() ? redirect()->route('net-worth') : view('welcome'))->name('home');
 
 // SEO: sinh theo APP_URL để đổi tên miền không phải sửa file.
-Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /quan-tri\nSitemap: ".url('sitemap.xml')."\n")
+Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /tong-tai-san\nDisallow: /vang\nDisallow: /quan-tri\nSitemap: ".url('sitemap.xml')."\n")
     ->header('Content-Type', 'text/plain; charset=UTF-8'))->name('robots');
 Route::view('chinh-sach', 'privacy')->name('privacy');
 Route::get('sitemap.xml', fn () => response()->view('sitemap')->header('Content-Type', 'application/xml; charset=UTF-8'))->name('sitemap');
@@ -44,6 +45,7 @@ Route::middleware('auth')->group(function () {
     Route::get('unlock', UnlockPage::class)->name('unlock');
 
     Route::middleware('pin')->group(function () {
+        Route::get('tong-tai-san', NetWorthPage::class)->middleware(['verified', 'area:tong'])->name('net-worth');
         Route::get('dashboard', Dashboard::class)->middleware(['verified', 'area:hui'])->name('dashboard');
         Route::view('profile', 'profile')->name('profile');
 

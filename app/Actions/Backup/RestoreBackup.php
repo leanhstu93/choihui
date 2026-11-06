@@ -19,6 +19,7 @@ use App\Models\GoldSale;
 use App\Models\HuiGroup;
 use App\Models\HuiRound;
 use App\Models\MySlot;
+use App\Models\NetWorthSnapshot;
 use App\Models\User;
 use App\Queries\UserBackup;
 use Illuminate\Support\Facades\Auth;
@@ -30,7 +31,8 @@ use Illuminate\Validation\Rule;
  * Khôi phục dữ liệu từ file sao lưu (FR-11): THAY THẾ toàn bộ dây hụi hiện có của người dùng.
  *
  * Sổ vàng chỉ bị thay khi file có khóa gold; file cũ không có khóa này thì giữ nguyên
- * (document/06-vang.md V11).
+ * (document/06-vang.md V11). Lịch sử tổng tài sản cũng vậy với khóa net_worth
+ * (document/07-tong-tai-san.md T8).
  *
  * Kiểm tra cả file trước khi xóa gì; lỗi thì dữ liệu cũ giữ nguyên. user_id luôn là người
  * dùng được truyền vào, không bao giờ lấy từ file.
@@ -73,6 +75,10 @@ final class RestoreBackup
             if ($gold !== null) {
                 $this->deleteExistingGold($user);
                 $this->restoreGold($user, $gold, $stats);
+            }
+
+            if (isset($data['net_worth'])) {
+                $this->restoreNetWorth($user, $data['net_worth']);
             }
 
             if (isset($data['settings']['reminder_days_before'])) {
@@ -142,6 +148,10 @@ final class RestoreBackup
             'gold.prices.*.gold_type' => ['required', 'distinct', Rule::enum(GoldType::class)],
             'gold.prices.*.price_per_chi' => ['required', 'integer', 'min:1', 'max:10000000000'],
             'gold.prices.*.priced_on' => ['required', 'date_format:Y-m-d'],
+            'net_worth' => ['sometimes', 'array', 'max:1200'],
+            'net_worth.*.month' => ['required', 'distinct', 'date_format:Y-m'],
+            'net_worth.*.assets' => ['required', 'integer', 'min:0'],
+            'net_worth.*.debts' => ['required', 'integer', 'min:0'],
         ]);
 
         if ($validator->fails()) {
@@ -245,6 +255,21 @@ final class RestoreBackup
     {
         foreach ([GoldSale::class, GoldItem::class, GoldPrice::class] as $modelClass) {
             $modelClass::query()->withoutGlobalScope(GoldItem::OWNER_SCOPE)->where('user_id', $user->id)->delete();
+        }
+    }
+
+    /**
+     * @param  list<array{month: string, assets: int, debts: int}>  $snapshots
+     */
+    private function restoreNetWorth(User $user, array $snapshots): void
+    {
+        NetWorthSnapshot::query()->withoutGlobalScope(NetWorthSnapshot::OWNER_SCOPE)->where('user_id', $user->id)->delete();
+
+        foreach ($snapshots as $snapshot) {
+            (new NetWorthSnapshot)->forceFill(['user_id' => $user->id] + array_intersect_key(
+                $snapshot,
+                array_flip(['month', 'assets', 'debts']),
+            ))->save();
         }
     }
 

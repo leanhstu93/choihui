@@ -31,7 +31,7 @@ test('both roles get a gold area with its own navigation', function (User $user)
     $this->actingAs($user);
 
     $this->get(route('gold.index'))->assertOk()
-        ->assertSeeInOrder(['Sổ hụi', 'Sổ vàng', 'Chưa có món vàng nào', 'Tổng quan', 'Giá vàng', 'Cài đặt'])
+        ->assertSeeInOrder(['Tổng', 'Hụi', 'Vàng', 'Chưa có món vàng nào', 'Tổng quan', 'Giá vàng', 'Cài đặt'])
         ->assertDontSee('Dây hụi');
 
     $this->get(route('gold.prices'))->assertOk()->assertSee('SJC')->assertSee('Vàng 10K');

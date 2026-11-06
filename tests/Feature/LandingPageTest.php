@@ -16,7 +16,7 @@ test('guests see the landing page with sign-up links and share metadata', functi
 });
 
 test('signed-in users go straight to their book', function () {
-    $this->actingAs(User::factory()->create())->get('/')->assertRedirect(route('dashboard'));
+    $this->actingAs(User::factory()->create())->get('/')->assertRedirect(route('net-worth'));
 });
 
 test('robots and sitemap point to the current domain', function () {

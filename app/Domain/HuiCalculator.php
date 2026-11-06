@@ -64,6 +64,15 @@ final class HuiCalculator
     }
 
     /**
+     * Khoản một tay đã hốt còn phải đóng: phần còn thiếu của các dòng đã sinh, cộng
+     * các kỳ sau chưa có dòng, mỗi kỳ M (document/07-tong-tai-san.md mục 3).
+     */
+    public static function remainingDebt(int $unpaidAmount, int $roundsWithoutEntry, int $faceValue): int
+    {
+        return $unpaidAmount + $roundsWithoutEntry * $faceValue;
+    }
+
+    /**
      * Lời (dương) hoặc lỗ (âm) theo tiền thực tế.
      */
     public static function profit(int $totalReceived, int $totalPaid): int

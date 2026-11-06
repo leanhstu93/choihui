@@ -22,7 +22,7 @@ new #[Layout('layouts.guest')] class extends Component
         Session::regenerate();
         EnsurePinUnlocked::markUnlocked();
 
-        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+        $this->redirectIntended(default: route('net-worth', absolute: false), navigate: true);
     }
 }; ?>
 

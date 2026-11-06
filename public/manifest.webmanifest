@@ -3,7 +3,7 @@
     "short_name": "Sổ hụi",
     "description": "Theo dõi tay hụi: kỳ phải đóng, tiền hốt và lời lỗ.",
     "lang": "vi",
-    "start_url": "/dashboard",
+    "start_url": "/tong-tai-san",
     "scope": "/",
     "display": "standalone",
     "orientation": "portrait",

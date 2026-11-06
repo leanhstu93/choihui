@@ -19,12 +19,18 @@ new class extends Component
 <header class="bg-emerald-700 text-white sticky top-0 z-20" style="padding-top: env(safe-area-inset-top)">
     <div class="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between gap-3">
         @php
-            $inGold = session(\App\Http\Middleware\RememberAppArea::SESSION_KEY) === \App\Http\Middleware\RememberAppArea::GOLD;
-            $tabClass = fn (bool $isActive) => $isActive ? 'bg-white text-emerald-800 font-semibold' : 'text-emerald-50';
+            $area = session(\App\Http\Middleware\RememberAppArea::SESSION_KEY, \App\Http\Middleware\RememberAppArea::HUI);
+            $tabs = [
+                ['area' => \App\Http\Middleware\RememberAppArea::OVERVIEW, 'route' => 'net-worth', 'label' => 'Tổng'],
+                ['area' => \App\Http\Middleware\RememberAppArea::HUI, 'route' => 'dashboard', 'label' => 'Hụi'],
+                ['area' => \App\Http\Middleware\RememberAppArea::GOLD, 'route' => 'gold.index', 'label' => 'Vàng'],
+            ];
         @endphp
         <nav class="flex shrink-0 rounded-lg bg-emerald-800 p-0.5 text-sm" aria-label="Chọn sổ">
-            <a href="{{ route('dashboard') }}" wire:navigate @if (! $inGold) aria-current="page" @endif class="rounded-md px-3 py-1.5 {{ $tabClass(! $inGold) }}">Sổ hụi</a>
-            <a href="{{ route('gold.index') }}" wire:navigate @if ($inGold) aria-current="page" @endif class="rounded-md px-3 py-1.5 {{ $tabClass($inGold) }}">Sổ vàng</a>
+            @foreach ($tabs as $tab)
+                <a href="{{ route($tab['route']) }}" wire:navigate @if ($area === $tab['area']) aria-current="page" @endif
+                   @class(['rounded-md px-3 py-1.5', 'bg-white text-emerald-800 font-semibold' => $area === $tab['area'], 'text-emerald-50' => $area !== $tab['area']])>{{ $tab['label'] }}</a>
+            @endforeach
         </nav>
 
         <div x-data="{ open: false }" class="relative min-w-0">

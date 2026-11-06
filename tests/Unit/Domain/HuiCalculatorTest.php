@@ -93,3 +93,8 @@ test('invalid input is rejected', function (Closure $calculate, string $message)
     'more unwon slots than free rounds' => [fn () => HuiCalculator::assumedWinRounds(3, [1, 2], 2), 'Số tay chưa hốt nhiều hơn số kỳ còn trống.'],
     'more unwon slots than free rounds when winning early' => [fn () => HuiCalculator::nextWinRounds(3, [1, 2], 2), 'Số tay chưa hốt nhiều hơn số kỳ còn trống.'],
 ]);
+
+test('the debt of a won slot adds unpaid rows and the rounds not opened yet', function () {
+    expect(HuiCalculator::remainingDebt(500_000, 2, 2_000_000))->toBe(4_500_000)
+        ->and(HuiCalculator::remainingDebt(0, 0, 2_000_000))->toBe(0);
+});
