@@ -18,15 +18,13 @@ use Livewire\Attributes\Title;
 use Livewire\Component;
 
 /**
- * Trang chủ "Sắp đến hạn" (FR-08): tổng cần đóng 30 ngày tới, các khoản gom theo
+ * Trang chủ "Sắp đến hạn" (FR-08): tổng cần đóng đến hết tháng này, các khoản gom theo
  * hạn đóng, đánh dấu đã đóng 1 chạm.
  */
 #[Layout('layouts.app')]
 #[Title('Trang chủ')]
 class Dashboard extends Component
 {
-    public const DAYS_AHEAD = 30;
-
     public ?string $actionError = null;
 
     /**
@@ -54,8 +52,8 @@ class Dashboard extends Component
 
     public function render(UpcomingPayments $upcomingPayments): View
     {
-        $today = new DateTimeImmutable('today');
-        $payments = $upcomingPayments->forUser(Auth::user(), $today->modify('+'.self::DAYS_AHEAD.' days'));
+        $today = now()->toImmutable()->startOfDay();
+        $payments = $upcomingPayments->forUser(Auth::user(), $today->endOfMonth()->startOfDay());
 
         return view('livewire.dashboard', [
             'today' => $today,

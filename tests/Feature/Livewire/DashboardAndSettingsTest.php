@@ -111,3 +111,18 @@ test('too many wrong PINs log the user out', function () {
 
     $this->assertGuest();
 });
+
+test('the home page lists payments up to the last day of this month and nothing later', function () {
+    $this->actingAs(User::factory()->create());
+    createHuiGroup(['start_date' => '2026-10-30', 'due_offset_days' => 0, 'total_slots' => 3]);
+    createHuiGroup(['start_date' => '2026-11-01', 'due_offset_days' => 0, 'total_slots' => 3]);
+
+    $this->travelTo('2026-11-06');
+    Livewire::test(Dashboard::class)
+        ->assertSee('Cần đóng (quá hạn và đến hết tháng 11)')
+        ->assertSee('Hạn 30/11/2026')
+        ->assertDontSee('Hạn 01/12/2026');
+
+    $this->travelTo('2026-12-01');
+    Livewire::test(Dashboard::class)->assertSee('hết tháng 12')->assertSee('Hạn 01/12/2026');
+});

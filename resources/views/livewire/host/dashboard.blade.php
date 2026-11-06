@@ -68,7 +68,7 @@
 
     @if ($pendingResults !== [])
         <section>
-            <h2 class="mb-2 text-sm font-semibold text-gray-600">Cần nhập kết quả ({{ \App\Livewire\Host\Dashboard::DAYS_AHEAD }} ngày tới)</h2>
+            <h2 class="mb-2 text-sm font-semibold text-gray-600">Cần nhập kết quả (đến hết tháng {{ $today->format('n') }})</h2>
             <ul class="divide-y divide-gray-100 rounded-xl bg-white shadow-sm">
                 @foreach ($pendingResults as $row)
                     <li wire:key="pending-{{ $row['round']->id }}">

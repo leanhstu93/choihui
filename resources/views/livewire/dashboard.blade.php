@@ -2,7 +2,7 @@
     <x-install-app />
 
     <section class="rounded-xl bg-emerald-700 p-5 text-white shadow-sm">
-        <p class="text-sm text-emerald-100">Cần đóng (quá hạn và {{ \App\Livewire\Dashboard::DAYS_AHEAD }} ngày tới)</p>
+        <p class="text-sm text-emerald-100">Cần đóng (quá hạn và đến hết tháng {{ $today->format('n') }})</p>
         <p class="mt-1 text-3xl font-semibold">@money($totalConfirmed + $totalEstimated)</p>
         <div class="mt-2 space-y-0.5 text-sm text-emerald-100">
             @if ($totalEstimated > 0)
@@ -49,7 +49,7 @@
         </section>
     @empty
         <div class="rounded-xl bg-white p-6 text-center text-sm text-gray-500 shadow-sm">
-            Không có khoản nào phải đóng trong {{ \App\Livewire\Dashboard::DAYS_AHEAD }} ngày tới.
+            Không có khoản nào phải đóng đến hết tháng {{ $today->format('n') }}.
             <a href="{{ route('groups.index') }}" wire:navigate class="font-semibold text-emerald-700">Xem các dây hụi</a>
         </div>
     @endforelse

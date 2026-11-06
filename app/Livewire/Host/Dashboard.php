@@ -10,7 +10,6 @@ use App\Enums\HostDirection;
 use App\Exceptions\HuiActionException;
 use App\Models\HostEntry;
 use App\Queries\HostDashboard;
-use DateTimeImmutable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
@@ -26,8 +25,6 @@ use Livewire\Component;
 #[Title('Trang chủ')]
 class Dashboard extends Component
 {
-    public const DAYS_AHEAD = 30;
-
     public ?string $actionError = null;
 
     /**
@@ -38,7 +35,7 @@ class Dashboard extends Component
         $entry = HostEntry::query()->findOrFail($entryId);
         Gate::authorize('update', $entry);
         $this->actionError = null;
-        $today = new DateTimeImmutable('today');
+        $today = now()->toImmutable()->startOfDay();
 
         try {
             if ($entry->direction === HostDirection::Chi) {
@@ -53,11 +50,11 @@ class Dashboard extends Component
 
     public function render(HostDashboard $hostDashboard): View
     {
-        $today = new DateTimeImmutable('today');
+        $today = now()->toImmutable()->startOfDay();
 
         return view('livewire.host.dashboard', [
             'today' => $today,
-            ...$hostDashboard->forUser(Auth::user(), $today, $today->modify('+'.self::DAYS_AHEAD.' days')),
+            ...$hostDashboard->forUser(Auth::user(), $today, $today->endOfMonth()->startOfDay()),
         ]);
     }
 }

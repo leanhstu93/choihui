@@ -6,6 +6,7 @@ use App\Actions\Host\RecordHostRoundResult;
 use App\Enums\CashEntryStatus;
 use App\Enums\UserRole;
 use App\Livewire\Dashboard;
+use App\Livewire\Host\Dashboard as HostDashboard;
 use App\Livewire\Host\GroupForm;
 use App\Livewire\Host\GroupShow;
 use App\Livewire\Host\RoundShow;
@@ -244,3 +245,14 @@ test('a collection belongs to the round page it is settled from', function () {
 
     Livewire::test(RoundShow::class, ['round' => $group->rounds[0]])->call('settleInFull', $entryOfRoundTwo->id);
 })->throws(ModelNotFoundException::class);
+
+test('the host home page stops at the end of this month', function () {
+    $this->actingAs(User::factory()->host()->create());
+    createHostGroup(['start_date' => '2026-11-01', 'due_offset_days' => 0, 'total_slots' => 3]);
+
+    $this->travelTo('2026-11-06');
+
+    Livewire::test(HostDashboard::class)
+        ->assertSee('đến hết tháng 11')
+        ->assertViewHas('pendingResults', fn (array $rows) => array_map(fn (array $row) => $row['round']->round_no, $rows) === [1]);
+});
