@@ -37,6 +37,10 @@ class AppServiceProvider extends ServiceProvider
             return "<?php echo number_format($expression, 0, ',', '.') . ' đ'; ?>";
         });
 
+        Blade::directive('chi', function ($expression) {
+            return "<?php echo \\App\\Domain\\GoldLedger::formatChi($expression); ?>";
+        });
+
         Blade::directive('date', function ($expression) {
             return "<?php echo ($expression) ? \Illuminate\Support\Carbon::parse($expression)->format('d/m/Y') : ''; ?>";
         });

@@ -165,6 +165,14 @@ return [
      * Tên hiển thị của các trường trong thông báo lỗi.
      */
     'attributes' => [
+        'gold_type' => 'loại vàng',
+        'weight_ly' => 'số chỉ',
+        'cost_amount' => 'tiền đã trả',
+        'bought_on' => 'ngày mua',
+        'shop' => 'tiệm vàng',
+        'amount' => 'tiền nhận được',
+        'sold_on' => 'ngày bán',
+        'price_per_chi' => 'giá',
         'name' => 'tên',
         'email' => 'email',
         'password' => 'mật khẩu',

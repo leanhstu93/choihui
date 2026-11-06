@@ -6,12 +6,16 @@ namespace App\Actions\Backup;
 
 use App\Enums\CashDirection;
 use App\Enums\CashEntryStatus;
+use App\Enums\GoldType;
 use App\Enums\HuiFrequency;
 use App\Enums\HuiGroupStatus;
 use App\Enums\HuiGroupType;
 use App\Enums\WinnerType;
 use App\Exceptions\HuiActionException;
 use App\Models\CashEntry;
+use App\Models\GoldItem;
+use App\Models\GoldPrice;
+use App\Models\GoldSale;
 use App\Models\HuiGroup;
 use App\Models\HuiRound;
 use App\Models\MySlot;
@@ -25,6 +29,9 @@ use Illuminate\Validation\Rule;
 /**
  * Khôi phục dữ liệu từ file sao lưu (FR-11): THAY THẾ toàn bộ dây hụi hiện có của người dùng.
  *
+ * Sổ vàng chỉ bị thay khi file có khóa gold; file cũ không có khóa này thì giữ nguyên
+ * (document/06-vang.md V11).
+ *
  * Kiểm tra cả file trước khi xóa gì; lỗi thì dữ liệu cũ giữ nguyên. user_id luôn là người
  * dùng được truyền vào, không bao giờ lấy từ file.
  */
@@ -32,7 +39,7 @@ final class RestoreBackup
 {
     /**
      * @param  array<mixed>  $data
-     * @return array{groups: int, rounds: int, entries: int}
+     * @return array{groups: int, rounds: int, entries: int, gold_items: int}
      *
      * @throws HuiActionException khi file không hợp lệ.
      */
@@ -48,13 +55,24 @@ final class RestoreBackup
             $this->validateGroup($group, $index + 1);
         }
 
-        return DB::transaction(function () use ($user, $data): array {
+        $gold = $data['gold'] ?? null;
+
+        if ($gold !== null) {
+            $this->validateGold($gold);
+        }
+
+        return DB::transaction(function () use ($user, $data, $gold): array {
             $this->deleteExistingData($user);
 
-            $stats = ['groups' => 0, 'rounds' => 0, 'entries' => 0];
+            $stats = ['groups' => 0, 'rounds' => 0, 'entries' => 0, 'gold_items' => 0];
 
             foreach ($data['groups'] as $groupData) {
                 $this->restoreGroup($user, $groupData, $stats);
+            }
+
+            if ($gold !== null) {
+                $this->deleteExistingGold($user);
+                $this->restoreGold($user, $gold, $stats);
             }
 
             if (isset($data['settings']['reminder_days_before'])) {
@@ -106,6 +124,24 @@ final class RestoreBackup
             'groups.*.rounds.*.entries.*.paid_date' => ['nullable', 'date_format:Y-m-d'],
             'groups.*.rounds.*.entries.*.status' => ['required', Rule::enum(CashEntryStatus::class)],
             'groups.*.rounds.*.entries.*.note' => ['nullable', 'string', 'max:2000'],
+            'gold' => ['sometimes', 'array'],
+            'gold.items' => ['present_with:gold', 'array', 'max:5000'],
+            'gold.items.*.gold_type' => ['required', Rule::enum(GoldType::class)],
+            'gold.items.*.name' => ['nullable', 'string', 'max:100'],
+            'gold.items.*.weight_ly' => ['required', 'integer', 'min:1', 'max:1000000'],
+            'gold.items.*.cost_amount' => ['required', 'integer', 'min:0', 'max:1000000000000'],
+            'gold.items.*.bought_on' => ['required', 'date_format:Y-m-d'],
+            'gold.items.*.shop' => ['nullable', 'string', 'max:100'],
+            'gold.items.*.note' => ['nullable', 'string', 'max:2000'],
+            'gold.items.*.sales' => ['present', 'array'],
+            'gold.items.*.sales.*.weight_ly' => ['required', 'integer', 'min:1', 'max:1000000'],
+            'gold.items.*.sales.*.amount' => ['required', 'integer', 'min:0', 'max:1000000000000'],
+            'gold.items.*.sales.*.sold_on' => ['required', 'date_format:Y-m-d'],
+            'gold.items.*.sales.*.note' => ['nullable', 'string', 'max:2000'],
+            'gold.prices' => ['present_with:gold', 'array'],
+            'gold.prices.*.gold_type' => ['required', 'distinct', Rule::enum(GoldType::class)],
+            'gold.prices.*.price_per_chi' => ['required', 'integer', 'min:1', 'max:10000000000'],
+            'gold.prices.*.priced_on' => ['required', 'date_format:Y-m-d'],
         ]);
 
         if ($validator->fails()) {
@@ -176,6 +212,28 @@ final class RestoreBackup
         }
     }
 
+    /**
+     * Ràng buộc nghiệp vụ giống SellGold.
+     *
+     * @param  array<string, mixed>  $gold
+     */
+    private function validateGold(array $gold): void
+    {
+        foreach ($gold['items'] as $index => $item) {
+            $position = $index + 1;
+
+            if (array_sum(array_column($item['sales'], 'weight_ly')) > $item['weight_ly']) {
+                throw new HuiActionException("Món vàng thứ {$position}: số chỉ đã bán vượt quá khối lượng món.");
+            }
+
+            foreach ($item['sales'] as $sale) {
+                if ($sale['sold_on'] < $item['bought_on']) {
+                    throw new HuiActionException("Món vàng thứ {$position}: ngày bán trước ngày mua.");
+                }
+            }
+        }
+    }
+
     private function deleteExistingData(User $user): void
     {
         foreach ([CashEntry::class, HuiRound::class, MySlot::class, HuiGroup::class] as $modelClass) {
@@ -183,9 +241,45 @@ final class RestoreBackup
         }
     }
 
+    private function deleteExistingGold(User $user): void
+    {
+        foreach ([GoldSale::class, GoldItem::class, GoldPrice::class] as $modelClass) {
+            $modelClass::query()->withoutGlobalScope(GoldItem::OWNER_SCOPE)->where('user_id', $user->id)->delete();
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $gold
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int}  $stats
+     */
+    private function restoreGold(User $user, array $gold, array &$stats): void
+    {
+        foreach ($gold['items'] as $itemData) {
+            $item = (new GoldItem)->forceFill(['user_id' => $user->id] + array_intersect_key($itemData, array_flip([
+                'gold_type', 'name', 'weight_ly', 'cost_amount', 'bought_on', 'shop', 'note',
+            ])));
+            $item->save();
+            $stats['gold_items']++;
+
+            foreach ($itemData['sales'] as $saleData) {
+                (new GoldSale)->forceFill(['user_id' => $user->id, 'gold_item_id' => $item->id] + array_intersect_key(
+                    $saleData,
+                    array_flip(['weight_ly', 'amount', 'sold_on', 'note']),
+                ))->save();
+            }
+        }
+
+        foreach ($gold['prices'] as $priceData) {
+            (new GoldPrice)->forceFill(['user_id' => $user->id] + array_intersect_key(
+                $priceData,
+                array_flip(['gold_type', 'price_per_chi', 'priced_on']),
+            ))->save();
+        }
+    }
+
     /**
      * @param  array<string, mixed>  $data
-     * @param  array{groups: int, rounds: int, entries: int}  $stats
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int}  $stats
      */
     private function restoreGroup(User $user, array $data, array &$stats): void
     {

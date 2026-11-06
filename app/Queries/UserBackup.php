@@ -5,6 +5,9 @@ declare(strict_types=1);
 namespace App\Queries;
 
 use App\Models\CashEntry;
+use App\Models\GoldItem;
+use App\Models\GoldPrice;
+use App\Models\GoldSale;
 use App\Models\HuiGroup;
 use App\Models\HuiRound;
 use App\Models\MySlot;
@@ -77,6 +80,51 @@ final class UserBackup
                     ])->values()->all(),
                 ])->all(),
             ])->all(),
+            'gold' => $this->exportGold($user),
+        ];
+    }
+
+    /**
+     * Sổ vàng (document/06-vang.md V11).
+     *
+     * @return array{items: list<array<string, mixed>>, prices: list<array<string, mixed>>}
+     */
+    private function exportGold(User $user): array
+    {
+        $items = GoldItem::query()
+            ->withoutGlobalScope(GoldItem::OWNER_SCOPE)
+            ->where('user_id', $user->id)
+            ->with(['sales' => fn ($query) => $query->withoutGlobalScope(GoldSale::OWNER_SCOPE)])
+            ->orderBy('bought_on')
+            ->orderBy('id')
+            ->get();
+        $prices = GoldPrice::query()
+            ->withoutGlobalScope(GoldPrice::OWNER_SCOPE)
+            ->where('user_id', $user->id)
+            ->orderBy('gold_type')
+            ->get();
+
+        return [
+            'items' => $items->map(fn (GoldItem $item) => [
+                'gold_type' => $item->gold_type->value,
+                'name' => $item->name,
+                'weight_ly' => $item->weight_ly,
+                'cost_amount' => $item->cost_amount,
+                'bought_on' => $item->bought_on->toDateString(),
+                'shop' => $item->shop,
+                'note' => $item->note,
+                'sales' => $item->sales->map(fn (GoldSale $sale) => [
+                    'weight_ly' => $sale->weight_ly,
+                    'amount' => $sale->amount,
+                    'sold_on' => $sale->sold_on->toDateString(),
+                    'note' => $sale->note,
+                ])->values()->all(),
+            ])->values()->all(),
+            'prices' => $prices->map(fn (GoldPrice $price) => [
+                'gold_type' => $price->gold_type->value,
+                'price_per_chi' => $price->price_per_chi,
+                'priced_on' => $price->priced_on->toDateString(),
+            ])->values()->all(),
         ];
     }
 }

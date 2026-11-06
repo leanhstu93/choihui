@@ -29,6 +29,7 @@
                 <ul>
                     <li><strong>Tài khoản:</strong> tên, email, mật khẩu (đã mã hóa một chiều, chúng tôi không đọc được).</li>
                     <li><strong>Sổ hụi:</strong> các dây, tay, kỳ, số tiền và ghi chú bạn tự nhập; với chủ hụi, thêm tên và số điện thoại hụi viên do bạn nhập.</li>
+                    <li><strong>Sổ vàng:</strong> các món vàng, giá mua, giá bán, tiệm và ghi chú bạn tự nhập.</li>
                     <li><strong>Cài đặt:</strong> số ngày nhắc hạn, mã PIN khóa màn hình (đã mã hóa).</li>
                 </ul>
             </section>

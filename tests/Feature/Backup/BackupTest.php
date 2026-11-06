@@ -67,7 +67,7 @@ test('a backup restored into another account reproduces the same data', function
     $this->actingAs($bob = User::factory()->create());
     $stats = app(RestoreBackup::class)->handle($bob, json_decode(json_encode($backup), true));
 
-    expect($stats)->toBe(['groups' => 2, 'rounds' => 20, 'entries' => 4])
+    expect($stats)->toBe(['groups' => 2, 'rounds' => 20, 'entries' => 4, 'gold_items' => 0])
         ->and(comparableBackup(app(UserBackup::class)->export($bob->refresh())))->toBe(comparableBackup($backup))
         ->and(HuiGroup::query()->withoutGlobalScopes()->where('user_id', $alice->id)->count())->toBe(2);
 });
