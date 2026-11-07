@@ -21,6 +21,9 @@ use App\Models\HuiGroup;
 use App\Models\HuiRound;
 use App\Models\MySlot;
 use App\Models\NetWorthSnapshot;
+use App\Models\RepairItem;
+use App\Models\RepairRecord;
+use App\Models\RepairRecordPhoto;
 use App\Models\User;
 use App\Queries\UserBackup;
 use Illuminate\Support\Facades\Auth;
@@ -34,7 +37,7 @@ use Illuminate\Validation\Rule;
  *
  * Sổ vàng chỉ bị thay khi file có khóa gold; file cũ không có khóa này thì giữ nguyên
  * (document/06-vang.md V11). Lịch sử tổng tài sản cũng vậy với khóa net_worth
- * (document/07-tong-tai-san.md T8).
+ * (document/07-tong-tai-san.md T8) và sổ sửa chữa với khóa repairs (document/08-sua-chua.md S7).
  *
  * Kiểm tra cả file trước khi xóa gì; lỗi thì dữ liệu cũ giữ nguyên. user_id luôn là người
  * dùng được truyền vào, không bao giờ lấy từ file.
@@ -43,7 +46,7 @@ final class RestoreBackup
 {
     /**
      * @param  array<mixed>  $data
-     * @return array{groups: int, rounds: int, entries: int, gold_items: int}
+     * @return array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int}
      *
      * @throws HuiActionException khi file không hợp lệ.
      */
@@ -65,12 +68,18 @@ final class RestoreBackup
             $this->validateGold($gold);
         }
 
+        $repairs = $data['repairs'] ?? null;
+
+        if ($repairs !== null) {
+            $this->validateRepairs($repairs);
+        }
+
         $orphanedPhotos = [];
 
-        $stats = DB::transaction(function () use ($user, $data, $gold, &$orphanedPhotos): array {
+        $stats = DB::transaction(function () use ($user, $data, $gold, $repairs, &$orphanedPhotos): array {
             $this->deleteExistingData($user);
 
-            $stats = ['groups' => 0, 'rounds' => 0, 'entries' => 0, 'gold_items' => 0];
+            $stats = ['groups' => 0, 'rounds' => 0, 'entries' => 0, 'gold_items' => 0, 'repair_items' => 0];
 
             foreach ($data['groups'] as $groupData) {
                 $this->restoreGroup($user, $groupData, $stats);
@@ -79,6 +88,11 @@ final class RestoreBackup
             if ($gold !== null) {
                 $orphanedPhotos = $this->deleteExistingGold($user);
                 $this->restoreGold($user, $gold, $stats);
+            }
+
+            if ($repairs !== null) {
+                $orphanedPhotos = [...$orphanedPhotos, ...$this->deleteExistingRepairs($user)];
+                $this->restoreRepairs($user, $repairs, $stats);
             }
 
             if (isset($data['net_worth'])) {
@@ -160,6 +174,19 @@ final class RestoreBackup
             'net_worth.*.month' => ['required', 'distinct', 'date_format:Y-m'],
             'net_worth.*.assets' => ['required', 'integer', 'min:0'],
             'net_worth.*.debts' => ['required', 'integer', 'min:0'],
+            'repairs' => ['sometimes', 'array'],
+            'repairs.items' => ['present_with:repairs', 'array', 'max:5000'],
+            'repairs.items.*.name' => ['required', 'string', 'max:100'],
+            'repairs.items.*.tracks_km' => ['required', 'boolean'],
+            'repairs.items.*.note' => ['nullable', 'string', 'max:2000'],
+            'repairs.items.*.records' => ['present', 'array'],
+            'repairs.items.*.records.*.repaired_on' => ['required', 'date_format:Y-m-d'],
+            'repairs.items.*.records.*.part' => ['required', 'string', 'max:100'],
+            'repairs.items.*.records.*.amount' => ['required', 'integer', 'min:0', 'max:1000000000000'],
+            'repairs.items.*.records.*.place' => ['nullable', 'string', 'max:100'],
+            'repairs.items.*.records.*.warranty_until' => ['nullable', 'date_format:Y-m-d'],
+            'repairs.items.*.records.*.odometer_km' => ['nullable', 'integer', 'min:0', 'max:10000000'],
+            'repairs.items.*.records.*.note' => ['nullable', 'string', 'max:2000'],
         ]);
 
         if ($validator->fails()) {
@@ -252,6 +279,22 @@ final class RestoreBackup
         }
     }
 
+    /**
+     * Ràng buộc nghiệp vụ giống StoreRepairRecordRequest.
+     *
+     * @param  array<string, mixed>  $repairs
+     */
+    private function validateRepairs(array $repairs): void
+    {
+        foreach ($repairs['items'] as $index => $item) {
+            foreach ($item['records'] as $record) {
+                if ($record['warranty_until'] !== null && $record['warranty_until'] < $record['repaired_on']) {
+                    throw new HuiActionException('Món đồ thứ '.($index + 1).': ngày bảo hành trước ngày sửa.');
+                }
+            }
+        }
+    }
+
     private function deleteExistingData(User $user): void
     {
         foreach ([CashEntry::class, HuiRound::class, MySlot::class, HuiGroup::class] as $modelClass) {
@@ -280,6 +323,44 @@ final class RestoreBackup
     }
 
     /**
+     * Ảnh không nằm trong file sao lưu nên mất theo lần sửa cũ (document/08-sua-chua.md S7).
+     *
+     * @return array<int, string> Đường dẫn file ảnh cần xóa sau khi transaction xong.
+     */
+    private function deleteExistingRepairs(User $user): array
+    {
+        $photoPaths = RepairRecordPhoto::query()
+            ->withoutGlobalScope(RepairRecordPhoto::OWNER_SCOPE)
+            ->where('user_id', $user->id)
+            ->pluck('path')
+            ->all();
+
+        RepairItem::query()->withoutGlobalScope(RepairItem::OWNER_SCOPE)->where('user_id', $user->id)->delete();
+
+        return $photoPaths;
+    }
+
+    /**
+     * @param  array<string, mixed>  $repairs
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int}  $stats
+     */
+    private function restoreRepairs(User $user, array $repairs, array &$stats): void
+    {
+        foreach ($repairs['items'] as $itemData) {
+            $item = (new RepairItem)->forceFill(['user_id' => $user->id] + array_intersect_key($itemData, array_flip(['name', 'tracks_km', 'note'])));
+            $item->save();
+            $stats['repair_items']++;
+
+            foreach ($itemData['records'] as $recordData) {
+                (new RepairRecord)->forceFill(['user_id' => $user->id, 'repair_item_id' => $item->id] + array_intersect_key(
+                    $recordData,
+                    array_flip(['repaired_on', 'part', 'amount', 'place', 'warranty_until', 'odometer_km', 'note']),
+                ))->save();
+            }
+        }
+    }
+
+    /**
      * @param  list<array{month: string, assets: int, debts: int}>  $snapshots
      */
     private function restoreNetWorth(User $user, array $snapshots): void
@@ -296,7 +377,7 @@ final class RestoreBackup
 
     /**
      * @param  array<string, mixed>  $gold
-     * @param  array{groups: int, rounds: int, entries: int, gold_items: int}  $stats
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int}  $stats
      */
     private function restoreGold(User $user, array $gold, array &$stats): void
     {
@@ -325,7 +406,7 @@ final class RestoreBackup
 
     /**
      * @param  array<string, mixed>  $data
-     * @param  array{groups: int, rounds: int, entries: int, gold_items: int}  $stats
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int}  $stats
      */
     private function restoreGroup(User $user, array $data, array &$stats): void
     {

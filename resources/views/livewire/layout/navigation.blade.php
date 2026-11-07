@@ -24,6 +24,7 @@ new class extends Component
                 ['area' => \App\Http\Middleware\RememberAppArea::OVERVIEW, 'route' => 'net-worth', 'label' => 'Tổng'],
                 ['area' => \App\Http\Middleware\RememberAppArea::HUI, 'route' => 'dashboard', 'label' => 'Hụi'],
                 ['area' => \App\Http\Middleware\RememberAppArea::GOLD, 'route' => 'gold.index', 'label' => 'Vàng'],
+                ['area' => \App\Http\Middleware\RememberAppArea::REPAIR, 'route' => 'repairs.index', 'label' => 'Sửa chữa'],
             ];
         @endphp
         <nav class="flex shrink-0 rounded-lg bg-emerald-800 p-0.5 text-sm" aria-label="Chọn sổ">

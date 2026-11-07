@@ -41,12 +41,14 @@ class User extends Authenticatable
     ];
 
     /**
-     * Xóa tài khoản xóa luôn ảnh vàng; dòng dữ liệu đã có cascade nhưng file thì không.
+     * Xóa tài khoản xóa luôn ảnh vàng và ảnh hóa đơn; dòng dữ liệu đã có cascade nhưng file
+     * thì không.
      */
     protected static function booted(): void
     {
         static::deleted(function (User $user): void {
             Storage::disk(GoldItemPhoto::DISK)->deleteDirectory("gold/{$user->id}");
+            Storage::disk(RepairRecordPhoto::DISK)->deleteDirectory("repairs/{$user->id}");
         });
     }
 

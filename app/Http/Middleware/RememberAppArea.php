@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Ghi nhớ khu người dùng đang ở (tong / hui / vang, document/06-vang.md V12), để các trang
+ * Ghi nhớ khu người dùng đang ở (tong / hui / vang / sua, document/06-vang.md V12), để các trang
  * dùng chung như Cài đặt vẫn giữ đúng thanh điều hướng của khu đó.
  */
 class RememberAppArea
@@ -21,6 +21,8 @@ class RememberAppArea
     public const GOLD = 'vang';
 
     public const HUI = 'hui';
+
+    public const REPAIR = 'sua';
 
     public function handle(Request $request, Closure $next, string $area): Response
     {

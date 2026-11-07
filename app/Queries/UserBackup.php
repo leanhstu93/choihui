@@ -12,6 +12,8 @@ use App\Models\HuiGroup;
 use App\Models\HuiRound;
 use App\Models\MySlot;
 use App\Models\NetWorthSnapshot;
+use App\Models\RepairItem;
+use App\Models\RepairRecord;
 use App\Models\User;
 
 /**
@@ -89,6 +91,7 @@ final class UserBackup
                 ->get()
                 ->map(fn (NetWorthSnapshot $snapshot) => $snapshot->only(['month', 'assets', 'debts']))
                 ->all(),
+            'repairs' => $this->exportRepairs($user),
         ];
     }
 
@@ -132,6 +135,39 @@ final class UserBackup
                 'gold_type' => $price->gold_type->value,
                 'price_per_chi' => $price->price_per_chi,
                 'priced_on' => $price->priced_on->toDateString(),
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * Sổ sửa chữa (document/08-sua-chua.md S7).
+     *
+     * @return array{items: list<array<string, mixed>>}
+     */
+    private function exportRepairs(User $user): array
+    {
+        $items = RepairItem::query()
+            ->withoutGlobalScope(RepairItem::OWNER_SCOPE)
+            ->where('user_id', $user->id)
+            ->with(['records' => fn ($query) => $query->withoutGlobalScope(RepairRecord::OWNER_SCOPE)->orderBy('repaired_on')->orderBy('id')])
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+
+        return [
+            'items' => $items->map(fn (RepairItem $item) => [
+                'name' => $item->name,
+                'tracks_km' => $item->tracks_km,
+                'note' => $item->note,
+                'records' => $item->records->map(fn (RepairRecord $record) => [
+                    'repaired_on' => $record->repaired_on->toDateString(),
+                    'part' => $record->part,
+                    'amount' => $record->amount,
+                    'place' => $record->place,
+                    'warranty_until' => $record->warranty_until?->toDateString(),
+                    'odometer_km' => $record->odometer_km,
+                    'note' => $record->note,
+                ])->values()->all(),
             ])->values()->all(),
         ];
     }

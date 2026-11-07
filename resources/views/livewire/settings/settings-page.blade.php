@@ -62,7 +62,7 @@
             </x-field>
             <label class="flex items-start gap-2 text-sm">
                 <input type="checkbox" wire:model="confirmRestore" class="mt-0.5 rounded border-gray-300 text-emerald-700">
-                <span>Tôi hiểu toàn bộ dây hụi hiện có sẽ bị <strong>thay thế</strong> bằng dữ liệu trong file. Nếu file có sổ vàng, sổ vàng hiện có cũng bị thay thế và <strong>ảnh vàng sẽ bị xóa</strong>, vì file sao lưu không chứa ảnh.</span>
+                <span>Tôi hiểu toàn bộ dây hụi hiện có sẽ bị <strong>thay thế</strong> bằng dữ liệu trong file. Nếu file có sổ vàng hoặc sổ sửa chữa, sổ tương ứng cũng bị thay thế và <strong>ảnh của sổ đó sẽ bị xóa</strong>, vì file sao lưu không chứa ảnh.</span>
             </label>
             @error('confirmRestore') <p class="text-sm text-red-600">{{ $message }}</p> @enderror
             <button type="submit" class="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" wire:loading.attr="disabled" wire:target="backupFile,restoreBackup">Khôi phục</button>

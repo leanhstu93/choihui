@@ -5,7 +5,7 @@ declare(strict_types=1);
 use App\Actions\Backup\RestoreBackup;
 use App\Actions\Gold\AddGoldItemPhotos;
 use App\Exceptions\HuiActionException;
-use App\Http\Requests\StoreGoldPhotosRequest;
+use App\Http\Requests\StorePhotosRequest;
 use App\Livewire\Gold\GoldItemForm;
 use App\Livewire\Gold\GoldItemShow;
 use App\Models\GoldItem;
@@ -104,7 +104,7 @@ test('a file renamed to .jpg is judged by its content, not its name', function (
     file_put_contents($path, '<?php echo 1;');
     $file = new UploadedFile($path, 'anh.jpg', 'image/jpeg', null, true);
 
-    expect(StoreGoldPhotosRequest::makeValidator(['photos' => [$file]], 5)->fails())->toBeTrue();
+    expect(StorePhotosRequest::makeValidator(['photos' => [$file]], 5, 5)->fails())->toBeTrue();
 
     unlink($path);
 });

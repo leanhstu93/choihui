@@ -11,7 +11,7 @@ use App\Domain\GoldLedger;
 use App\Enums\GoldType;
 use App\Exceptions\HuiActionException;
 use App\Http\Requests\StoreGoldItemRequest;
-use App\Http\Requests\StoreGoldPhotosRequest;
+use App\Http\Requests\StorePhotosRequest;
 use App\Models\GoldItem;
 use App\Models\GoldItemPhoto;
 use Illuminate\View\View;
@@ -88,7 +88,7 @@ class GoldItemForm extends Component
         }
 
         $this->actionError = null;
-        StoreGoldPhotosRequest::makeValidator(['photos' => $this->photos], $this->remainingPhotoSlots($item))->validate();
+        StorePhotosRequest::makeValidator(['photos' => $this->photos], $this->remainingPhotoSlots($item), GoldItem::MAX_PHOTOS)->validate();
 
         $validated = StoreGoldItemRequest::makeValidator([
             'gold_type' => $this->goldType,

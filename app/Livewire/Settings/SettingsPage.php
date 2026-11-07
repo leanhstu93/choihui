@@ -124,7 +124,7 @@ class SettingsPage extends Component
 
         $this->reset(['backupFile', 'confirmRestore']);
         $this->reminderDaysBefore = $this->user()->refresh()->reminder_days_before;
-        session()->flash('status', "Đã khôi phục {$stats['groups']} dây hụi, {$stats['rounds']} kỳ, {$stats['entries']} dòng tiền, {$stats['gold_items']} món vàng.");
+        session()->flash('status', "Đã khôi phục {$stats['groups']} dây hụi, {$stats['rounds']} kỳ, {$stats['entries']} dòng tiền, {$stats['gold_items']} món vàng, {$stats['repair_items']} món đồ.");
     }
 
     /**

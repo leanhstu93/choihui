@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\BackupDownloadController;
 use App\Http\Controllers\GoldPhotoController;
+use App\Http\Controllers\RepairPhotoController;
 use App\Livewire\Admin\Dashboard as AdminDashboard;
 use App\Livewire\Admin\GroupShow as AdminGroupShow;
 use App\Livewire\Admin\LogIndex as AdminLogIndex;
@@ -27,6 +28,10 @@ use App\Livewire\Host\RoundShow as HostRoundShow;
 use App\Livewire\Members\MemberIndex;
 use App\Livewire\Members\MemberShow;
 use App\Livewire\NetWorth\NetWorthPage;
+use App\Livewire\Repairs\RepairIndex;
+use App\Livewire\Repairs\RepairItemForm;
+use App\Livewire\Repairs\RepairItemShow;
+use App\Livewire\Repairs\RepairRecordForm;
 use App\Livewire\Reports\ProfitReportPage;
 use App\Livewire\Rounds\RoundShow;
 use App\Livewire\Settings\SettingsPage;
@@ -37,7 +42,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', fn () => auth()->check() ? redirect()->route('net-worth') : view('welcome'))->name('home');
 
 // SEO: sinh theo APP_URL để đổi tên miền không phải sửa file.
-Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /tong-tai-san\nDisallow: /vang\nDisallow: /quan-tri\nSitemap: ".url('sitemap.xml')."\n")
+Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /tong-tai-san\nDisallow: /vang\nDisallow: /sua-chua\nDisallow: /quan-tri\nSitemap: ".url('sitemap.xml')."\n")
     ->header('Content-Type', 'text/plain; charset=UTF-8'))->name('robots');
 Route::view('chinh-sach', 'privacy')->name('privacy');
 Route::get('sitemap.xml', fn () => response()->view('sitemap')->header('Content-Type', 'application/xml; charset=UTF-8'))->name('sitemap');
@@ -91,6 +96,17 @@ Route::middleware('auth')->group(function () {
             Route::get('anh/{goldItemPhoto}', GoldPhotoController::class)->name('photos.show');
             Route::get('{goldItem}', GoldItemShow::class)->name('show');
             Route::get('{goldItem}/sua', GoldItemForm::class)->name('edit');
+        });
+
+        // Sổ sửa chữa (document/08-sua-chua.md): chung cho cả hai vai trò.
+        Route::middleware('area:sua')->prefix('sua-chua')->name('repairs.')->group(function () {
+            Route::get('/', RepairIndex::class)->name('index');
+            Route::get('them', RepairItemForm::class)->name('items.create');
+            Route::get('anh/{repairRecordPhoto}', RepairPhotoController::class)->name('photos.show');
+            Route::get('lan-sua/{repairRecord}/sua', RepairRecordForm::class)->name('records.edit');
+            Route::get('{repairItem}', RepairItemShow::class)->name('show');
+            Route::get('{repairItem}/sua', RepairItemForm::class)->name('edit');
+            Route::get('{repairItem}/them-lan-sua', RepairRecordForm::class)->name('records.create');
         });
 
         Route::get('settings', SettingsPage::class)->name('settings');
