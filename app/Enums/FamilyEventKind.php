@@ -35,4 +35,50 @@ enum FamilyEventKind: string
             self::KyNiem, self::Khac => "{$years} năm",
         };
     }
+
+    /**
+     * Biểu tượng hiện trên danh sách và nút chọn loại.
+     */
+    public function icon(): string
+    {
+        return match ($this) {
+            self::Gio => '🕯️',
+            self::SinhNhat => '🎂',
+            self::KyNiem => '💍',
+            self::Khac => '📌',
+        };
+    }
+
+    /**
+     * Lịch hay dùng cho loại này: giỗ thường tính theo âm lịch, còn lại theo dương lịch.
+     */
+    public function defaultCalendar(): CalendarType
+    {
+        return $this === self::Gio ? CalendarType::Am : CalendarType::Duong;
+    }
+
+    /**
+     * Tên ô năm gốc theo loại (G5).
+     */
+    public function originYearLabel(): string
+    {
+        return match ($this) {
+            self::Gio => 'Năm mất',
+            self::SinhNhat => 'Năm sinh',
+            self::KyNiem, self::Khac => 'Năm bắt đầu',
+        };
+    }
+
+    /**
+     * Ví dụ tên gợi ý trong ô nhập.
+     */
+    public function titlePlaceholder(): string
+    {
+        return match ($this) {
+            self::Gio => 'Ví dụ: Giỗ ông nội',
+            self::SinhNhat => 'Ví dụ: Sinh nhật mẹ',
+            self::KyNiem => 'Ví dụ: Kỷ niệm ngày cưới',
+            self::Khac => 'Ví dụ: Rằm tháng Giêng',
+        };
+    }
 }

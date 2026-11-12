@@ -123,10 +123,47 @@ test('the list is sorted by the next occurrence and shows countdowns', function 
     FamilyEvent::factory()->for($user)->lunar(4, 10)->create(['title' => 'Giỗ bà', 'kind' => FamilyEventKind::Gio, 'origin_year' => 2020]);
 
     Livewire::test(EventIndex::class)->assertSeeInOrder([
-        'Giỗ bà', '12/11/2026 · 4/10 ÂL', 'Giỗ lần thứ 6', 'Hôm nay',
+        'Giỗ bà', '12/11/2026', '4/10 ÂL', 'Giỗ lần thứ 6', 'Hôm nay',
         'Sinh nhật mẹ', '13/11/2026', 'Tròn 60 tuổi', 'Ngày mai',
         'Kỷ niệm cưới', '01/11/2027', '11 năm', 'Còn 354 ngày',
     ]);
+});
+
+test('the empty list offers quick starts that preselect the kind and its usual calendar', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->get(route('family.index'))->assertOk()
+        ->assertSee(route('family.events.create', ['loai' => 'gio']))
+        ->assertSee(route('family.events.create', ['loai' => 'sinh_nhat']));
+
+    $this->get(route('family.events.create', ['loai' => 'sinh_nhat']))->assertOk();
+    Livewire::withQueryParams(['loai' => 'sinh_nhat'])->test(EventForm::class)
+        ->assertSet('kind', 'sinh_nhat')->assertSet('calendar', 'duong')->assertSee('Năm sinh');
+    Livewire::withQueryParams(['loai' => 'khong-co'])->test(EventForm::class)
+        ->assertSet('kind', 'gio')->assertSet('calendar', 'am');
+});
+
+test('changing the kind of a new event switches to its usual calendar until the user picks one', function () {
+    $this->actingAs(User::factory()->create());
+
+    Livewire::test(EventForm::class)
+        ->set('kind', 'ky_niem')->assertSet('calendar', 'duong')
+        ->set('kind', 'gio')->assertSet('calendar', 'am')
+        ->set('calendar', 'duong')
+        ->set('kind', 'sinh_nhat')->set('kind', 'gio')->assertSet('calendar', 'duong');
+
+    $event = FamilyEvent::factory()->for(auth()->user())->create(['kind' => FamilyEventKind::SinhNhat, 'calendar' => CalendarType::Duong]);
+    Livewire::test(EventForm::class, ['familyEvent' => $event])->set('kind', 'gio')->assertSet('calendar', 'duong');
+});
+
+test('the list splits events within 30 days from the rest of the year', function () {
+    $this->actingAs($user = User::factory()->create());
+    FamilyEvent::factory()->for($user)->create(['title' => 'Sinh nhật mẹ', 'day' => 13, 'month' => 11]);
+    FamilyEvent::factory()->for($user)->create(['title' => 'Kỷ niệm cưới', 'kind' => FamilyEventKind::KyNiem, 'day' => 1, 'month' => 11]);
+
+    Livewire::test(EventIndex::class)
+        ->assertSeeInOrder(['Trong 30 ngày tới', 'Sinh nhật mẹ', 'Thứ Sáu, 13/11/2026', 'Cả năm', 'Kỷ niệm cưới'])
+        ->assertDontSee('Chưa có ngày nhớ nào');
 });
 
 test('one account cannot see or change another account\'s events', function () {

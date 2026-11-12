@@ -44,22 +44,48 @@ class EventForm extends Component
 
     public string $note = '';
 
+    /**
+     * Người dùng đã tự chọn âm / dương lịch thì đổi loại không tự đổi lịch nữa.
+     */
+    public bool $calendarChosen = false;
+
     public function mount(?FamilyEvent $familyEvent = null): void
     {
-        if ($familyEvent?->exists) {
-            $this->authorize('update', $familyEvent);
-            $this->fill([
-                'eventId' => $familyEvent->id,
-                'title' => $familyEvent->title,
-                'kind' => $familyEvent->kind->value,
-                'calendar' => $familyEvent->calendar->value,
-                'day' => (string) $familyEvent->day,
-                'month' => (string) $familyEvent->month,
-                'originYear' => (string) $familyEvent->origin_year,
-                'remindDaysBefore' => (string) $familyEvent->remind_days_before,
-                'note' => (string) $familyEvent->note,
-            ]);
+        if (! $familyEvent?->exists) {
+            // Nút "Thêm ngày giỗ / sinh nhật..." ở trang danh sách gửi kèm ?loai=.
+            $kind = FamilyEventKind::tryFrom((string) request()->query('loai')) ?? FamilyEventKind::Gio;
+            $this->kind = $kind->value;
+            $this->calendar = $kind->defaultCalendar()->value;
+
+            return;
         }
+
+        $this->authorize('update', $familyEvent);
+        $this->fill([
+            'eventId' => $familyEvent->id,
+            'title' => $familyEvent->title,
+            'kind' => $familyEvent->kind->value,
+            'calendar' => $familyEvent->calendar->value,
+            'day' => (string) $familyEvent->day,
+            'month' => (string) $familyEvent->month,
+            'originYear' => (string) $familyEvent->origin_year,
+            'remindDaysBefore' => (string) $familyEvent->remind_days_before,
+            'note' => (string) $familyEvent->note,
+        ]);
+    }
+
+    public function updatedKind(string $value): void
+    {
+        $kind = FamilyEventKind::tryFrom($value);
+
+        if ($this->eventId === null && ! $this->calendarChosen && $kind !== null) {
+            $this->calendar = $kind->defaultCalendar()->value;
+        }
+    }
+
+    public function updatedCalendar(): void
+    {
+        $this->calendarChosen = true;
     }
 
     public function save(SaveFamilyEvent $saveFamilyEvent): void
@@ -130,6 +156,9 @@ class EventForm extends Component
 
         return view('livewire.family.event-form', [
             'kinds' => FamilyEventKind::cases(),
+            'selectedKind' => FamilyEventKind::tryFrom($this->kind) ?? FamilyEventKind::Khac,
+            'lunar' => $lunar,
+            'remindPresets' => [0 => 'Không nhắc', 1 => 'Trước 1 ngày', 3 => 'Trước 3 ngày', 7 => 'Trước 1 tuần', 14 => 'Trước 2 tuần'],
             'maxDay' => $lunar ? 30 : 31,
             'preview' => $preview,
         ]);

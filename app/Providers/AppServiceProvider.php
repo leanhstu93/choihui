@@ -41,6 +41,10 @@ class AppServiceProvider extends ServiceProvider
             return "<?php echo \\App\\Domain\\GoldLedger::formatChi($expression); ?>";
         });
 
+        Blade::directive('weekday', function ($expression) {
+            return "<?php echo ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'][\\Illuminate\\Support\\Carbon::parse($expression)->dayOfWeek]; ?>";
+        });
+
         Blade::directive('date', function ($expression) {
             return "<?php echo ($expression) ? \Illuminate\Support\Carbon::parse($expression)->format('d/m/Y') : ''; ?>";
         });
