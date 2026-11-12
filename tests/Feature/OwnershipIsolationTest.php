@@ -142,7 +142,7 @@ test('slots cannot exceed the number of slots in the group', function () {
     MySlot::factory()->count(2)->for($group, 'group')->create();
 
     $this->actingAs($alice)
-        ->post('/_test/slots', ['group_id' => $group->id, 'label' => 'Tay 3'])
+        ->post('/_test/slots', ['group_id' => $group->id, 'label' => 'Tay thừa'])
         ->assertInvalid(['label' => 'Số tay của mình không được vượt quá tổng số tay của dây.']);
 });
 
