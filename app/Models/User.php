@@ -41,7 +41,7 @@ class User extends Authenticatable
     ];
 
     /**
-     * Xóa tài khoản xóa luôn ảnh vàng và ảnh hóa đơn; dòng dữ liệu đã có cascade nhưng file
+     * Xóa tài khoản xóa luôn ảnh vàng, ảnh hóa đơn và ảnh sổ sức khỏe; dòng dữ liệu đã có cascade nhưng file
      * thì không.
      */
     protected static function booted(): void
@@ -49,6 +49,7 @@ class User extends Authenticatable
         static::deleted(function (User $user): void {
             Storage::disk(GoldItemPhoto::DISK)->deleteDirectory("gold/{$user->id}");
             Storage::disk(RepairRecordPhoto::DISK)->deleteDirectory("repairs/{$user->id}");
+            Storage::disk(HealthRecordPhoto::DISK)->deleteDirectory("health/{$user->id}");
         });
     }
 
@@ -65,6 +66,7 @@ class User extends Authenticatable
             'reminder_days_before' => 'integer',
             'pin_hash' => 'hashed',
             'last_reminded_on' => 'date',
+            'family_reminded_on' => 'date',
             'role' => UserRole::class,
             'locked_at' => 'datetime',
             'last_seen_at' => 'datetime',

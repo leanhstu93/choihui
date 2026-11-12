@@ -25,18 +25,21 @@ new class extends Component
                 ['area' => \App\Http\Middleware\RememberAppArea::HUI, 'route' => 'dashboard', 'label' => 'Hụi'],
                 ['area' => \App\Http\Middleware\RememberAppArea::GOLD, 'route' => 'gold.index', 'label' => 'Vàng'],
                 ['area' => \App\Http\Middleware\RememberAppArea::REPAIR, 'route' => 'repairs.index', 'label' => 'Sửa chữa'],
+                ['area' => \App\Http\Middleware\RememberAppArea::FAMILY, 'route' => 'family.index', 'label' => 'Gia đình'],
             ];
         @endphp
-        <nav class="flex shrink-0 rounded-lg bg-emerald-800 p-0.5 text-sm" aria-label="Chọn sổ">
+        {{-- Năm sổ không vừa màn 360px: thanh cuộn ngang, sổ đang mở tự cuộn vào khung. --}}
+        <nav class="flex min-w-0 overflow-x-auto rounded-lg bg-emerald-800 p-0.5 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Chọn sổ"
+             x-data x-init="$el.querySelector('[aria-current]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })">
             @foreach ($tabs as $tab)
                 <a href="{{ route($tab['route']) }}" wire:navigate @if ($area === $tab['area']) aria-current="page" @endif
-                   @class(['rounded-md px-3 py-1.5', 'bg-white text-emerald-800 font-semibold' => $area === $tab['area'], 'text-emerald-50' => $area !== $tab['area']])>{{ $tab['label'] }}</a>
+                   @class(['shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 sm:px-3', 'bg-white text-emerald-800 font-semibold' => $area === $tab['area'], 'text-emerald-50' => $area !== $tab['area']])>{{ $tab['label'] }}</a>
             @endforeach
         </nav>
 
-        <div x-data="{ open: false }" class="relative min-w-0">
+        <div x-data="{ open: false }" class="relative shrink-0">
             <button type="button" x-on:click="open = ! open" class="flex min-w-0 items-center gap-1 text-sm text-emerald-50">
-                <span class="max-w-24 truncate" x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name" x-on:profile-updated.window="name = $event.detail.name"></span>
+                <span class="max-w-16 truncate sm:max-w-24" x-data="{{ json_encode(['name' => auth()->user()->name]) }}" x-text="name" x-on:profile-updated.window="name = $event.detail.name"></span>
                 <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" /></svg>
             </button>
 

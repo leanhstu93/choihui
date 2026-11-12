@@ -4,19 +4,27 @@ declare(strict_types=1);
 
 namespace App\Actions\Backup;
 
+use App\Domain\FamilyCalendar;
+use App\Enums\CalendarType;
 use App\Enums\CashDirection;
 use App\Enums\CashEntryStatus;
+use App\Enums\FamilyEventKind;
 use App\Enums\GoldType;
+use App\Enums\HealthRecordKind;
 use App\Enums\HuiFrequency;
 use App\Enums\HuiGroupStatus;
 use App\Enums\HuiGroupType;
 use App\Enums\WinnerType;
 use App\Exceptions\HuiActionException;
 use App\Models\CashEntry;
+use App\Models\FamilyEvent;
 use App\Models\GoldItem;
 use App\Models\GoldItemPhoto;
 use App\Models\GoldPrice;
 use App\Models\GoldSale;
+use App\Models\HealthPerson;
+use App\Models\HealthRecord;
+use App\Models\HealthRecordPhoto;
 use App\Models\HuiGroup;
 use App\Models\HuiRound;
 use App\Models\MySlot;
@@ -37,7 +45,8 @@ use Illuminate\Validation\Rule;
  *
  * Sổ vàng chỉ bị thay khi file có khóa gold; file cũ không có khóa này thì giữ nguyên
  * (document/06-vang.md V11). Lịch sử tổng tài sản cũng vậy với khóa net_worth
- * (document/07-tong-tai-san.md T8) và sổ sửa chữa với khóa repairs (document/08-sua-chua.md S7).
+ * (document/07-tong-tai-san.md T8) và sổ sửa chữa với khóa repairs (document/08-sua-chua.md S7), sổ gia đình với khóa family
+ * (document/09-gia-dinh.md G12).
  *
  * Kiểm tra cả file trước khi xóa gì; lỗi thì dữ liệu cũ giữ nguyên. user_id luôn là người
  * dùng được truyền vào, không bao giờ lấy từ file.
@@ -46,7 +55,7 @@ final class RestoreBackup
 {
     /**
      * @param  array<mixed>  $data
-     * @return array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int}
+     * @return array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int}
      *
      * @throws HuiActionException khi file không hợp lệ.
      */
@@ -74,12 +83,18 @@ final class RestoreBackup
             $this->validateRepairs($repairs);
         }
 
+        $family = $data['family'] ?? null;
+
+        if ($family !== null) {
+            $this->validateFamily($family);
+        }
+
         $orphanedPhotos = [];
 
-        $stats = DB::transaction(function () use ($user, $data, $gold, $repairs, &$orphanedPhotos): array {
+        $stats = DB::transaction(function () use ($user, $data, $gold, $repairs, $family, &$orphanedPhotos): array {
             $this->deleteExistingData($user);
 
-            $stats = ['groups' => 0, 'rounds' => 0, 'entries' => 0, 'gold_items' => 0, 'repair_items' => 0];
+            $stats = ['groups' => 0, 'rounds' => 0, 'entries' => 0, 'gold_items' => 0, 'repair_items' => 0, 'family_events' => 0, 'health_people' => 0];
 
             foreach ($data['groups'] as $groupData) {
                 $this->restoreGroup($user, $groupData, $stats);
@@ -93,6 +108,11 @@ final class RestoreBackup
             if ($repairs !== null) {
                 $orphanedPhotos = [...$orphanedPhotos, ...$this->deleteExistingRepairs($user)];
                 $this->restoreRepairs($user, $repairs, $stats);
+            }
+
+            if ($family !== null) {
+                $orphanedPhotos = [...$orphanedPhotos, ...$this->deleteExistingFamily($user)];
+                $this->restoreFamily($user, $family, $stats);
             }
 
             if (isset($data['net_worth'])) {
@@ -187,6 +207,28 @@ final class RestoreBackup
             'repairs.items.*.records.*.warranty_until' => ['nullable', 'date_format:Y-m-d'],
             'repairs.items.*.records.*.odometer_km' => ['nullable', 'integer', 'min:0', 'max:10000000'],
             'repairs.items.*.records.*.note' => ['nullable', 'string', 'max:2000'],
+            'family' => ['sometimes', 'array'],
+            'family.events' => ['present_with:family', 'array', 'max:5000'],
+            'family.events.*.title' => ['required', 'string', 'max:100'],
+            'family.events.*.kind' => ['required', Rule::enum(FamilyEventKind::class)],
+            'family.events.*.calendar' => ['required', Rule::enum(CalendarType::class)],
+            'family.events.*.day' => ['required', 'integer', 'min:1', 'max:31'],
+            'family.events.*.month' => ['required', 'integer', 'min:1', 'max:12'],
+            'family.events.*.origin_year' => ['nullable', 'integer', 'min:1800', 'max:2200'],
+            'family.events.*.remind_days_before' => ['required', 'integer', 'min:0', 'max:30'],
+            'family.events.*.note' => ['nullable', 'string', 'max:2000'],
+            'family.people' => ['present_with:family', 'array', 'max:1000'],
+            'family.people.*.name' => ['required', 'string', 'max:100'],
+            'family.people.*.birth_year' => ['nullable', 'integer', 'min:1900', 'max:2200'],
+            'family.people.*.note' => ['nullable', 'string', 'max:2000'],
+            'family.people.*.records' => ['present', 'array'],
+            'family.people.*.records.*.visited_on' => ['required', 'date_format:Y-m-d'],
+            'family.people.*.records.*.kind' => ['required', Rule::enum(HealthRecordKind::class)],
+            'family.people.*.records.*.title' => ['required', 'string', 'max:150'],
+            'family.people.*.records.*.place' => ['nullable', 'string', 'max:100'],
+            'family.people.*.records.*.amount' => ['nullable', 'integer', 'min:0', 'max:1000000000000'],
+            'family.people.*.records.*.follow_up_on' => ['nullable', 'date_format:Y-m-d'],
+            'family.people.*.records.*.note' => ['nullable', 'string', 'max:2000'],
         ]);
 
         if ($validator->fails()) {
@@ -295,6 +337,28 @@ final class RestoreBackup
         }
     }
 
+    /**
+     * Ràng buộc nghiệp vụ giống StoreFamilyEventRequest, StoreHealthRecordRequest và CHECK trong database.
+     *
+     * @param  array<string, mixed>  $family
+     */
+    private function validateFamily(array $family): void
+    {
+        foreach ($family['events'] as $index => $event) {
+            if (! FamilyCalendar::isValid($event['calendar'] === CalendarType::Am->value, $event['day'], $event['month'])) {
+                throw new HuiActionException('Ngày nhớ thứ '.($index + 1).": ngày {$event['day']}/{$event['month']} không có thật.");
+            }
+        }
+
+        foreach ($family['people'] as $index => $person) {
+            foreach ($person['records'] as $record) {
+                if (($record['follow_up_on'] ?? null) !== null && $record['follow_up_on'] < $record['visited_on']) {
+                    throw new HuiActionException('Người thứ '.($index + 1).': ngày tái khám trước ngày khám.');
+                }
+            }
+        }
+    }
+
     private function deleteExistingData(User $user): void
     {
         foreach ([CashEntry::class, HuiRound::class, MySlot::class, HuiGroup::class] as $modelClass) {
@@ -342,7 +406,7 @@ final class RestoreBackup
 
     /**
      * @param  array<string, mixed>  $repairs
-     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int}  $stats
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int}  $stats
      */
     private function restoreRepairs(User $user, array $repairs, array &$stats): void
     {
@@ -355,6 +419,52 @@ final class RestoreBackup
                 (new RepairRecord)->forceFill(['user_id' => $user->id, 'repair_item_id' => $item->id] + array_intersect_key(
                     $recordData,
                     array_flip(['repaired_on', 'part', 'amount', 'place', 'warranty_until', 'odometer_km', 'note']),
+                ))->save();
+            }
+        }
+    }
+
+    /**
+     * Ảnh không nằm trong file sao lưu nên mất theo lần khám cũ (document/09-gia-dinh.md G12).
+     *
+     * @return array<int, string> Đường dẫn file ảnh cần xóa sau khi transaction xong.
+     */
+    private function deleteExistingFamily(User $user): array
+    {
+        $photoPaths = HealthRecordPhoto::query()
+            ->withoutGlobalScope(HealthRecordPhoto::OWNER_SCOPE)
+            ->where('user_id', $user->id)
+            ->pluck('path')
+            ->all();
+
+        HealthPerson::query()->withoutGlobalScope(HealthPerson::OWNER_SCOPE)->where('user_id', $user->id)->delete();
+        FamilyEvent::query()->withoutGlobalScope(FamilyEvent::OWNER_SCOPE)->where('user_id', $user->id)->delete();
+
+        return $photoPaths;
+    }
+
+    /**
+     * @param  array<string, mixed>  $family
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int}  $stats
+     */
+    private function restoreFamily(User $user, array $family, array &$stats): void
+    {
+        foreach ($family['events'] as $eventData) {
+            (new FamilyEvent)->forceFill(['user_id' => $user->id] + array_intersect_key($eventData, array_flip([
+                'title', 'kind', 'calendar', 'day', 'month', 'origin_year', 'remind_days_before', 'note',
+            ])))->save();
+            $stats['family_events']++;
+        }
+
+        foreach ($family['people'] as $personData) {
+            $person = (new HealthPerson)->forceFill(['user_id' => $user->id] + array_intersect_key($personData, array_flip(['name', 'birth_year', 'note'])));
+            $person->save();
+            $stats['health_people']++;
+
+            foreach ($personData['records'] as $recordData) {
+                (new HealthRecord)->forceFill(['user_id' => $user->id, 'health_person_id' => $person->id] + array_intersect_key(
+                    $recordData,
+                    array_flip(['visited_on', 'kind', 'title', 'place', 'amount', 'follow_up_on', 'note']),
                 ))->save();
             }
         }
@@ -377,7 +487,7 @@ final class RestoreBackup
 
     /**
      * @param  array<string, mixed>  $gold
-     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int}  $stats
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int}  $stats
      */
     private function restoreGold(User $user, array $gold, array &$stats): void
     {
@@ -406,7 +516,7 @@ final class RestoreBackup
 
     /**
      * @param  array<string, mixed>  $data
-     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int}  $stats
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int}  $stats
      */
     private function restoreGroup(User $user, array $data, array &$stats): void
     {

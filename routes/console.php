@@ -11,3 +11,8 @@ Schedule::command('hui:send-due-reminders')
     ->dailyAt('07:00')
     ->timezone('Asia/Ho_Chi_Minh')
     ->withoutOverlapping();
+
+Schedule::command('family:send-reminders')
+    ->dailyAt('07:00')
+    ->timezone('Asia/Ho_Chi_Minh')
+    ->withoutOverlapping();

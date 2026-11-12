@@ -31,6 +31,7 @@
                     <li><strong>Sổ hụi:</strong> các dây, tay, kỳ, số tiền và ghi chú bạn tự nhập; với chủ hụi, thêm tên và số điện thoại hụi viên do bạn nhập.</li>
                     <li><strong>Sổ vàng:</strong> các món vàng, giá mua, giá bán, tiệm, ghi chú và ảnh bạn tự nhập. Ảnh được lưu riêng tư, chỉ tài khoản của bạn xem được, và bị xóa khi bạn xóa món vàng hoặc tài khoản.</li>
                     <li><strong>Sổ sửa chữa:</strong> các món đồ, lần sửa, số tiền, nơi sửa, ghi chú và ảnh hóa đơn bạn tự nhập. Ảnh được lưu riêng tư, chỉ tài khoản của bạn xem được, và bị xóa khi bạn xóa lần sửa, món đồ hoặc tài khoản.</li>
+                    <li><strong>Sổ gia đình:</strong> các ngày nhớ (giỗ, sinh nhật, kỷ niệm) và sổ sức khỏe: tên, năm sinh của người thân, các lần khám, tiêm, xét nghiệm, chi phí, ghi chú và ảnh đơn thuốc, kết quả bạn tự nhập. Đây là thông tin nhạy cảm, quản trị viên không xem được sổ này. Ảnh được lưu riêng tư, chỉ tài khoản của bạn xem được, và bị xóa khi bạn xóa lần khám, người hoặc tài khoản.</li>
                     <li><strong>Tổng tài sản:</strong> số tổng từng tháng, tính từ các sổ trên.</li>
                     <li><strong>Cài đặt:</strong> số ngày nhắc hạn, mã PIN khóa màn hình (đã mã hóa).</li>
                 </ul>

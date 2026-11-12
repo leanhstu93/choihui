@@ -12,8 +12,12 @@
     $repairItems = [
         ['route' => 'repairs.index', 'active' => ['repairs.*'], 'label' => 'Món đồ', 'icon' => 'M14.7 6.3a4 4 0 0 0-5.4 5.1L3 17.7V21h3.3l6.3-6.3a4 4 0 0 0 5.1-5.4l-2.6 2.6-2.8-.8-.8-2.8 2.2-2.2Z'],
     ];
+    $familyItems = [
+        ['route' => 'family.index', 'active' => ['family.index', 'family.events.*'], 'label' => 'Ngày nhớ', 'icon' => 'M8 3v4m8-4v4M3 10h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Zm7 9.5-1.1-1a1.6 1.6 0 1 0-2.2 2.3L12 18l3.3-3.2a1.6 1.6 0 1 0-2.2-2.3Z'],
+        ['route' => 'family.health.index', 'active' => ['family.health.*'], 'label' => 'Sức khỏe', 'icon' => 'M20.8 5.6a5 5 0 0 0-7.1 0L12 7.3l-1.7-1.7a5 5 0 0 0-7.1 7.1L12 21.5l8.8-8.8a5 5 0 0 0 0-7.1ZM3.5 12h4l1.5-3 3 6 1.5-3h4'],
+    ];
     $area = session(\App\Http\Middleware\RememberAppArea::SESSION_KEY);
-    $items = $area === \App\Http\Middleware\RememberAppArea::REPAIR ? $repairItems : ($area === \App\Http\Middleware\RememberAppArea::GOLD ? $goldItems : ($area === \App\Http\Middleware\RememberAppArea::OVERVIEW ? $overviewItems : (auth()->user()?->isHost() ? [
+    $items = $area === \App\Http\Middleware\RememberAppArea::FAMILY ? $familyItems : ($area === \App\Http\Middleware\RememberAppArea::REPAIR ? $repairItems : ($area === \App\Http\Middleware\RememberAppArea::GOLD ? $goldItems : ($area === \App\Http\Middleware\RememberAppArea::OVERVIEW ? $overviewItems : (auth()->user()?->isHost() ? [
         ['route' => 'host.dashboard', 'active' => ['host.dashboard'], 'label' => 'Trang chủ', 'icon' => $home['icon']],
         ['route' => 'host.groups.index', 'active' => ['host.groups.*', 'host.rounds.*'], 'label' => 'Dây hụi', 'icon' => $groupsIcon],
         ['route' => 'host.members.index', 'active' => ['host.members.*'], 'label' => 'Hụi viên', 'icon' => 'M16 19v-1a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v1M9 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm13 9v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8'],
@@ -22,7 +26,7 @@
         $home,
         ['route' => 'groups.index', 'active' => ['groups.*', 'rounds.*'], 'label' => 'Dây hụi', 'icon' => $groupsIcon],
         ['route' => 'reports', 'active' => ['reports'], 'label' => 'Báo cáo', 'icon' => $reportsIcon],
-    ])));
+    ]))));
     $items[] = ['route' => 'settings', 'active' => ['settings', 'profile'], 'label' => 'Cài đặt', 'icon' => 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm7.4-3a7.4 7.4 0 0 0-.1-1.3l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2.2-1.3L14.4 3h-4l-.4 2.4a7.6 7.6 0 0 0-2.2 1.3l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.6l-2 1.6 2 3.4 2.4-1a7.6 7.6 0 0 0 2.2 1.3l.4 2.4h4l.4-2.4a7.6 7.6 0 0 0 2.2-1.3l2.4 1 2-3.4-2-1.6c.1-.4.1-.9.1-1.3Z'];
 @endphp
 

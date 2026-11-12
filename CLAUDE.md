@@ -1,3 +1,56 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Sổ Hụi: project context
+
+This app tracks rotating savings groups (hụi / họ). The UI, docs, comments and validation messages are in Vietnamese. The specs live in `../document/`: `01-dac-ta.md` (spec, formulas, section 5), `02-kien-truc.md` (architecture), `03-checklist.md`, `04-chu-hui.md` (host role), `05-quan-tri.md` (admin), `06-vang.md` (gold ledger), `07-tong-tai-san.md` (net worth), `08-sua-chua.md` (repair log) and `09-gia-dinh.md` (family: lunar/solar anniversaries and health log). The app is turning into a general personal notebook; hụi is one of several books. Read the relevant spec section before you change a business rule. Code comments often cite spec IDs such as `FR-04` and "mục 5".
+
+Glossary: **dây** = group (`HuiGroup`), **kỳ** = round (`HuiRound`), **tay** = slot, **lãi thăm** = bid (`bid_amount`, L), **mệnh giá** = face value (M), **thảo** = host commission, **hốt** = win a round, **bể** = the group collapsed (`broken_round_no`).
+
+### Commands
+
+The Laravel app lives in `src/`. Docker Compose is one level up, in `laravel-docker/`. Run every `php`, `composer` and `npm` command inside the `app` container. The Artisan and test commands in the Boost section below should be run through it too:
+
+```bash
+docker compose up -d                                   # from laravel-docker/
+docker compose exec app php artisan test --compact
+docker compose exec app php artisan test --compact tests/Feature/Actions/SomeTest.php
+docker compose exec app php artisan test --compact --filter='test name'
+docker compose exec app vendor/bin/pint --dirty --format agent
+docker compose exec app vendor/bin/phpstan analyse --memory-limit=1G   # Larastan level 6, has a baseline
+docker compose exec app npm run dev                    # Vite on :5173; app on http://localhost:7000
+```
+
+Tests run against real **MySQL 8**, in the `laravel_test` database created by `../docker/mysql/init/01-test-database.sh`. They do not use SQLite, because the tests rely on CHECK constraints and FK behaviour. CI (`.github/workflows`) runs `pint --test`, phpstan and `php artisan test` on every push to `main`, then deploys to Hostinger over SSH. Pushing to `main` deploys to production.
+
+### Architecture (enforced by `tests/Unit/ArchTest.php`)
+
+- `app/Domain`: pure PHP with no Illuminate, Models, Actions or UI imports. `HuiCalculator` holds the money formulas (`payout`, `netPayout`, `amountDue`, `projectedProfit`). `HuiSchedule` handles open and due dates. `PaymentStatus` derives `du`/`thieu`/`muon`/... `HostLedger` does the same for the host side.
+- `app/Actions`: the only layer that writes. Actions are single-purpose classes with `handle()`, wrap their work in `DB::transaction`, and throw `HuiActionException` for business errors. `ConfirmationRequiredException` means "ask the user, then retry with `$confirmed = true`". Throwing it inside the transaction rolls the write back.
+- `app/Livewire`: full-page components routed directly in `routes/web.php`. A component does `Gate::authorize`, then validates with `SomeRequest::makeValidator(...)` (FormRequests expose static `rulesFor`/`makeValidator` so Livewire can reuse them), then calls an Action and turns exceptions into `$actionError` / `$confirmationMessage`.
+- `app/Queries`: read-side aggregates for dashboards, reports, ledgers and backups.
+- Enums are string-backed. Keys are TitleCase and values are the snake_case DB strings (`DangChay` → `dang_chay`), with a Vietnamese `label()`.
+
+### Derived cash rows
+
+`cash_entries` (member side) and `host_entries` (host side) are **derived** from round results. `RecordRoundResult` / `RecordHostRoundResult` save the round and then call `SyncCashEntries` / `SyncHostEntries`, which recompute the **whole group**: one row per slot per round that has a bid. A slot that wins the round gets `nhan`; every other slot gets `dong`. Rows that already have money recorded are only overwritten after the user confirms. Do not edit `amount_expected` anywhere else. Change the calculator or the sync instead.
+
+### Roles and data isolation
+
+- There are two parallel feature sets, split by `users.role` and the `role:` middleware. **`hui_vien`** (member: `Groups/`, `Rounds/`, `MySlot`, `CashEntry`) and **`chu_hui`** (host: `Host/`, `Members/`, `HostSlot`, `HostEntry`, under the `chu-hui` route prefix with `host.*` names) each have their own components, actions and policies. When you change a rule, check whether the other side needs the same change.
+- Admin pages are restricted to the emails in `ADMIN_EMAILS` and return 404 for everyone else.
+- The `pin` middleware (`EnsurePinUnlocked`) locks the session after `hui.pin_idle_minutes` of inactivity.
+- Every user-owned model uses `Models\Concerns\OwnedByUser`. A global scope filters by `Auth::id()` and `user_id` is filled in on create, so `user_id` is never in `$fillable`. Raw `DB::` queries and `withoutGlobalScopes()` bypass the scope and must filter by `user_id` themselves. Policies (`isOwnedBy`) are the second layer.
+
+### Conventions
+
+- Money is always an `int` in đồng, never a float or decimal. Dates are `date` columns with timezone `Asia/Ho_Chi_Minh`. The open date of round k is computed from `start_date` by `HuiSchedule`, never by stepping from the previous round.
+- Domain tables use ULID primary keys. `users` and `admin_logs` use auto-increment IDs.
+- Every file uses `declare(strict_types=1);` (Pint and the arch test both check this).
+- The scheduler runs `hui:send-due-reminders` and `family:send-reminders` daily at 07:00 (`routes/console.php`).
+- Lunar dates always go through `Domain\LunarCalendar` (UTC+7). Yearly anniversaries use `Domain\FamilyCalendar`.
+
 <laravel-boost-guidelines>
 === foundation rules ===
 
@@ -151,5 +204,7 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - Rerun a test after each change to it.
 - Run `vendor/bin/pest` to call the test runner directly. It accepts the same file path and `--filter=testName` arguments.
 - After the feature tests pass, ask the user to run the complete suite with `php artisan test --compact`.
+
+# Luôn dùng uv để chạy server và quản lý thư viện. Không dùng pip trực tiếp.
 
 </laravel-boost-guidelines>

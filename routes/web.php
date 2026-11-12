@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\BackupDownloadController;
 use App\Http\Controllers\GoldPhotoController;
+use App\Http\Controllers\HealthPhotoController;
 use App\Http\Controllers\RepairPhotoController;
 use App\Livewire\Admin\Dashboard as AdminDashboard;
 use App\Livewire\Admin\GroupShow as AdminGroupShow;
@@ -11,6 +12,12 @@ use App\Livewire\Admin\LogIndex as AdminLogIndex;
 use App\Livewire\Admin\UserIndex as AdminUserIndex;
 use App\Livewire\Admin\UserShow as AdminUserShow;
 use App\Livewire\Dashboard;
+use App\Livewire\Family\EventForm as FamilyEventForm;
+use App\Livewire\Family\EventIndex as FamilyEventIndex;
+use App\Livewire\Family\HealthIndex;
+use App\Livewire\Family\PersonForm as HealthPersonForm;
+use App\Livewire\Family\PersonShow as HealthPersonShow;
+use App\Livewire\Family\RecordForm as HealthRecordForm;
 use App\Livewire\Gold\GoldIndex;
 use App\Livewire\Gold\GoldItemForm;
 use App\Livewire\Gold\GoldItemShow;
@@ -42,7 +49,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', fn () => auth()->check() ? redirect()->route('net-worth') : view('welcome'))->name('home');
 
 // SEO: sinh theo APP_URL để đổi tên miền không phải sửa file.
-Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /tong-tai-san\nDisallow: /vang\nDisallow: /sua-chua\nDisallow: /quan-tri\nSitemap: ".url('sitemap.xml')."\n")
+Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /tong-tai-san\nDisallow: /vang\nDisallow: /sua-chua\nDisallow: /gia-dinh\nDisallow: /quan-tri\nSitemap: ".url('sitemap.xml')."\n")
     ->header('Content-Type', 'text/plain; charset=UTF-8'))->name('robots');
 Route::view('chinh-sach', 'privacy')->name('privacy');
 Route::get('sitemap.xml', fn () => response()->view('sitemap')->header('Content-Type', 'application/xml; charset=UTF-8'))->name('sitemap');
@@ -107,6 +114,23 @@ Route::middleware('auth')->group(function () {
             Route::get('{repairItem}', RepairItemShow::class)->name('show');
             Route::get('{repairItem}/sua', RepairItemForm::class)->name('edit');
             Route::get('{repairItem}/them-lan-sua', RepairRecordForm::class)->name('records.create');
+        });
+
+        // Sổ gia đình: ngày nhớ và sức khỏe (document/09-gia-dinh.md): chung cho cả hai vai trò.
+        Route::middleware('area:nha')->prefix('gia-dinh')->name('family.')->group(function () {
+            Route::get('/', FamilyEventIndex::class)->name('index');
+            Route::get('them', FamilyEventForm::class)->name('events.create');
+            Route::get('ngay-nho/{familyEvent}/sua', FamilyEventForm::class)->name('events.edit');
+
+            Route::prefix('suc-khoe')->name('health.')->group(function () {
+                Route::get('/', HealthIndex::class)->name('index');
+                Route::get('them', HealthPersonForm::class)->name('people.create');
+                Route::get('anh/{healthRecordPhoto}', HealthPhotoController::class)->name('photos.show');
+                Route::get('lan-kham/{healthRecord}/sua', HealthRecordForm::class)->name('records.edit');
+                Route::get('{healthPerson}', HealthPersonShow::class)->name('show');
+                Route::get('{healthPerson}/sua', HealthPersonForm::class)->name('people.edit');
+                Route::get('{healthPerson}/them-lan-kham', HealthRecordForm::class)->name('records.create');
+            });
         });
 
         Route::get('settings', SettingsPage::class)->name('settings');

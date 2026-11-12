@@ -5,9 +5,12 @@ declare(strict_types=1);
 namespace App\Queries;
 
 use App\Models\CashEntry;
+use App\Models\FamilyEvent;
 use App\Models\GoldItem;
 use App\Models\GoldPrice;
 use App\Models\GoldSale;
+use App\Models\HealthPerson;
+use App\Models\HealthRecord;
 use App\Models\HuiGroup;
 use App\Models\HuiRound;
 use App\Models\MySlot;
@@ -92,6 +95,7 @@ final class UserBackup
                 ->map(fn (NetWorthSnapshot $snapshot) => $snapshot->only(['month', 'assets', 'debts']))
                 ->all(),
             'repairs' => $this->exportRepairs($user),
+            'family' => $this->exportFamily($user),
         ];
     }
 
@@ -166,6 +170,55 @@ final class UserBackup
                     'place' => $record->place,
                     'warranty_until' => $record->warranty_until?->toDateString(),
                     'odometer_km' => $record->odometer_km,
+                    'note' => $record->note,
+                ])->values()->all(),
+            ])->values()->all(),
+        ];
+    }
+
+    /**
+     * Sổ gia đình (document/09-gia-dinh.md G12). Ảnh không nằm trong file.
+     *
+     * @return array{events: list<array<string, mixed>>, people: list<array<string, mixed>>}
+     */
+    private function exportFamily(User $user): array
+    {
+        $events = FamilyEvent::query()
+            ->withoutGlobalScope(FamilyEvent::OWNER_SCOPE)
+            ->where('user_id', $user->id)
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+        $people = HealthPerson::query()
+            ->withoutGlobalScope(HealthPerson::OWNER_SCOPE)
+            ->where('user_id', $user->id)
+            ->with(['records' => fn ($query) => $query->withoutGlobalScope(HealthRecord::OWNER_SCOPE)->orderBy('visited_on')->orderBy('id')])
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
+
+        return [
+            'events' => $events->map(fn (FamilyEvent $event) => [
+                'title' => $event->title,
+                'kind' => $event->kind->value,
+                'calendar' => $event->calendar->value,
+                'day' => $event->day,
+                'month' => $event->month,
+                'origin_year' => $event->origin_year,
+                'remind_days_before' => $event->remind_days_before,
+                'note' => $event->note,
+            ])->values()->all(),
+            'people' => $people->map(fn (HealthPerson $person) => [
+                'name' => $person->name,
+                'birth_year' => $person->birth_year,
+                'note' => $person->note,
+                'records' => $person->records->map(fn (HealthRecord $record) => [
+                    'visited_on' => $record->visited_on->toDateString(),
+                    'kind' => $record->kind->value,
+                    'title' => $record->title,
+                    'place' => $record->place,
+                    'amount' => $record->amount,
+                    'follow_up_on' => $record->follow_up_on?->toDateString(),
                     'note' => $record->note,
                 ])->values()->all(),
             ])->values()->all(),
