@@ -43,10 +43,14 @@ use App\Livewire\Reports\ProfitReportPage;
 use App\Livewire\Rounds\RoundShow;
 use App\Livewire\Settings\SettingsPage;
 use App\Livewire\Settings\UnlockPage;
+use App\Queries\LunarDateLookup;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Route;
 
 // Trang giới thiệu cho khách; người đã đăng nhập vào thẳng sổ của mình.
-Route::get('/', fn () => auth()->check() ? redirect()->route('net-worth') : view('welcome'))->name('home');
+Route::get('/', fn (LunarDateLookup $lunar) => auth()->check()
+    ? redirect()->route('net-worth')
+    : view('welcome', ['lunarLookup' => $lunar->from(CarbonImmutable::today())]))->name('home');
 
 // SEO: sinh theo APP_URL để đổi tên miền không phải sửa file.
 Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /tong-tai-san\nDisallow: /vang\nDisallow: /sua-chua\nDisallow: /gia-dinh\nDisallow: /quan-tri\nSitemap: ".url('sitemap.xml')."\n")

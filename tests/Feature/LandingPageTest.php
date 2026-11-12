@@ -3,14 +3,15 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
 
 test('guests see the landing page with sign-up links and share metadata', function () {
     $this->get('/')
         ->assertOk()
-        ->assertSee('Ai chưa đóng')
+        ->assertSee('Gọn trong một cuốn sổ.')
         ->assertSee(route('register'))
         ->assertSee('<meta property="og:image" content="'.asset('images/og-image.png').'">', false)
-        ->assertSee('Hốt kỳ nào thì lời?');
+        ->assertSee('Ngày giỗ năm nay rơi vào ngày nào?');
 
     expect(public_path('images/og-image.png'))->toBeFile();
 });
@@ -40,4 +41,14 @@ test('Google Analytics is only loaded when configured, with cookies denied until
         ->assertSee('https://www.googletagmanager.com/gtag/js?id=G-TEST123', false)
         ->assertSeeInOrder(["gtag('consent', 'default'", "'denied'", "gtag('config'"], false)
         ->assertSee('id="cookie-consent"', false);
+});
+
+test('the lunar date lookup on the landing page gives the next solar date of each lunar day', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-11-12'));
+
+    $lookup = $this->get('/')->assertOk()->viewData('lunarLookup');
+
+    expect($lookup)->toHaveCount(360)
+        ->and($lookup['1/1'])->toBe('2027-02-06')
+        ->and($lookup['15/1'])->toBe('2027-02-20');
 });

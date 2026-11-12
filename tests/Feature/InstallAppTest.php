@@ -13,7 +13,7 @@ test('both home pages show the install app card', function (Closure $makeUser, s
     $this->actingAs($makeUser())->get(route($routeName))
         ->assertOk()
         ->assertSee('x-data="installApp"', false)
-        ->assertSee('Cài Sổ hụi lên màn hình chính');
+        ->assertSee('Cài '.config('app.name').' lên màn hình chính');
 })->with([
     'player' => [fn () => User::factory()->create(), 'dashboard'],
     'host' => [fn () => User::factory()->host()->create(), 'host.dashboard'],

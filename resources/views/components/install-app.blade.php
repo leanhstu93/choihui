@@ -3,7 +3,7 @@
     <section x-show="platform" class="flex items-center gap-3 rounded-xl border border-emerald-200 bg-white p-3 shadow-sm">
         <img src="/icons/icon-192.png" alt="" class="h-11 w-11 shrink-0 rounded-xl">
         <div class="min-w-0 flex-1 text-sm">
-            <div class="font-semibold">Cài Sổ hụi lên màn hình chính</div>
+            <div class="font-semibold">Cài {{ config('app.name') }} lên màn hình chính</div>
             <div class="text-gray-500" x-text="platform === 'in-app' ? 'Mở bằng trình duyệt để cài' : 'Mở nhanh như app, không cần tải'"></div>
         </div>
         <div class="flex shrink-0 flex-col items-end gap-1">
@@ -16,7 +16,7 @@
     <div x-show="showGuide" x-transition.opacity class="fixed inset-0 z-50 flex items-end bg-black/50" @click.self="showGuide = false" role="dialog" aria-modal="true" aria-label="Hướng dẫn cài app">
         <div class="w-full rounded-t-3xl bg-white p-5 pb-8" style="padding-bottom: calc(2rem + env(safe-area-inset-bottom))">
             <div class="flex items-center justify-between">
-                <h2 class="text-lg font-semibold">Cài Sổ hụi</h2>
+                <h2 class="text-lg font-semibold">Cài {{ config('app.name') }}</h2>
                 <button type="button" @click="showGuide = false" class="text-2xl leading-none text-gray-400" aria-label="Đóng">&times;</button>
             </div>
 

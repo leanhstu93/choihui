@@ -3,14 +3,14 @@
 <html lang="vi">
     <head>
         @include('partials.head', ['title' => 'Chính sách bảo mật'])
-        <meta name="description" content="Sổ hụi thu thập dữ liệu gì, dùng vào việc gì và bạn có những quyền gì với dữ liệu của mình.">
+        <meta name="description" content="{{ config('app.name') }} thu thập dữ liệu gì, dùng vào việc gì và bạn có những quyền gì với dữ liệu của mình.">
         <link rel="canonical" href="{{ route('privacy') }}">
     </head>
     <body class="bg-white font-sans text-gray-900 antialiased">
         <header class="border-b border-gray-100">
             <div class="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
                 <a href="{{ url('/') }}" class="flex items-center gap-2 font-semibold text-emerald-800">
-                    <img src="/icons/icon-192.png" alt="" class="h-8 w-8 rounded-lg"> Sổ hụi
+                    <img src="/icons/icon-192.png" alt="" class="h-8 w-8 rounded-lg"> {{ config('app.name') }}
                 </a>
                 <a href="{{ route('register') }}" class="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">Dùng miễn phí</a>
             </div>
@@ -22,7 +22,7 @@
                 <p class="mt-1 text-sm text-gray-500">Cập nhật ngày 23/10/2026</p>
             </div>
 
-            <p>Sổ hụi là công cụ ghi sổ và tính toán hụi. Chúng tôi không giữ tiền, không tổ chức hụi và không bán dữ liệu của bạn.</p>
+            <p>{{ config('app.name') }} là công cụ ghi chép cá nhân: tài sản, hụi, vàng, sửa chữa, ngày nhớ và sức khỏe. Chúng tôi không giữ tiền, không tổ chức hụi và không bán dữ liệu của bạn.</p>
 
             <section>
                 <h2>Dữ liệu chúng tôi lưu</h2>
@@ -43,8 +43,8 @@
                     <li>Hiển thị sổ hụi và tính tiền cho chính bạn.</li>
                     <li>Gửi email nhắc hạn và email đặt lại mật khẩu.</li>
                 </ul>
-                <p class="mt-2">Mỗi tài khoản chỉ xem được dữ liệu của chính mình. Chúng tôi không dùng dữ liệu sổ hụi cho quảng cáo.</p>
-                <p class="mt-2"><strong>Quản trị viên</strong> của Sổ hụi có thể xem tài khoản và sổ hụi của bạn để hỗ trợ khi bạn báo lỗi, xử lý tài khoản vi phạm và vận hành trang web. Quản trị viên chỉ xem, không sửa sổ hụi của bạn, và không biết mật khẩu hay mã PIN của bạn. Mọi lần xem đều được ghi lại.</p>
+                <p class="mt-2">Mỗi tài khoản chỉ xem được dữ liệu của chính mình. Chúng tôi không dùng dữ liệu trong sổ của bạn cho quảng cáo.</p>
+                <p class="mt-2"><strong>Quản trị viên</strong> của {{ config('app.name') }} có thể xem tài khoản và sổ hụi của bạn để hỗ trợ khi bạn báo lỗi, xử lý tài khoản vi phạm và vận hành trang web. Quản trị viên chỉ xem, không sửa sổ hụi của bạn, và không biết mật khẩu hay mã PIN của bạn. Mọi lần xem đều được ghi lại.</p>
             </section>
 
             <section>
@@ -67,7 +67,7 @@
             </section>
         </main>
 
-        <footer class="px-4 py-6 text-center text-xs text-gray-400">© {{ date('Y') }} Sổ hụi</footer>
+        <footer class="px-4 py-6 text-center text-xs text-gray-400">© {{ date('Y') }} {{ config('app.name') }}</footer>
         <x-cookie-consent />
     </body>
 </html>

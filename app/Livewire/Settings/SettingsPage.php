@@ -109,7 +109,7 @@ class SettingsPage extends Component
         $data = json_decode((string) $this->backupFile->get(), true);
 
         if (! is_array($data)) {
-            $this->addError('backupFile', 'File không phải file sao lưu JSON của Sổ hụi.');
+            $this->addError('backupFile', 'File không phải file sao lưu JSON của '.config('app.name').'.');
 
             return;
         }

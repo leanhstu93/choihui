@@ -2,9 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Sổ Hụi: project context
+## Sổ tay (formerly Sổ hụi): project context
 
-This app tracks rotating savings groups (hụi / họ). The UI, docs, comments and validation messages are in Vietnamese. The specs live in `../document/`: `01-dac-ta.md` (spec, formulas, section 5), `02-kien-truc.md` (architecture), `03-checklist.md`, `04-chu-hui.md` (host role), `05-quan-tri.md` (admin), `06-vang.md` (gold ledger), `07-tong-tai-san.md` (net worth), `08-sua-chua.md` (repair log) and `09-gia-dinh.md` (family: lunar/solar anniversaries and health log). The app is turning into a general personal notebook; hụi is one of several books. Read the relevant spec section before you change a business rule. Code comments often cite spec IDs such as `FR-04` and "mục 5".
+This app tracks rotating savings groups (hụi / họ). The UI, docs, comments and validation messages are in Vietnamese. The specs live in `../document/`: `01-dac-ta.md` (spec, formulas, section 5), `02-kien-truc.md` (architecture), `03-checklist.md`, `04-chu-hui.md` (host role), `05-quan-tri.md` (admin), `06-vang.md` (gold ledger), `07-tong-tai-san.md` (net worth), `08-sua-chua.md` (repair log) and `09-gia-dinh.md` (family: lunar/solar anniversaries and health log). The app is now a general personal notebook branded "Sổ tay" (`APP_NAME`; the landing page, PWA manifest and icons use it); hụi is one of several books. Read the relevant spec section before you change a business rule. Code comments often cite spec IDs such as `FR-04` and "mục 5".
 
 Glossary: **dây** = group (`HuiGroup`), **kỳ** = round (`HuiRound`), **tay** = slot, **lãi thăm** = bid (`bid_amount`, L), **mệnh giá** = face value (M), **thảo** = host commission, **hốt** = win a round, **bể** = the group collapsed (`broken_round_no`).
 

@@ -173,5 +173,5 @@ test('a file that is not JSON shows an error on the settings page', function () 
         ->set('backupFile', UploadedFile::fake()->createWithContent('anh.json', 'không phải json'))
         ->set('confirmRestore', true)
         ->call('restoreBackup')
-        ->assertHasErrors(['backupFile' => 'File không phải file sao lưu JSON của Sổ hụi.']);
+        ->assertHasErrors(['backupFile' => 'File không phải file sao lưu JSON của '.config('app.name').'.']);
 });

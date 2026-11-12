@@ -1,7 +1,7 @@
 {
-    "name": "Sổ hụi",
-    "short_name": "Sổ hụi",
-    "description": "Theo dõi tay hụi: kỳ phải đóng, tiền hốt và lời lỗ.",
+    "name": "Sổ tay",
+    "short_name": "Sổ tay",
+    "description": "Sổ tay tài chính & gia đình: tài sản, hụi, vàng, sửa chữa, ngày nhớ, sức khỏe.",
     "lang": "vi",
     "start_url": "/tong-tai-san",
     "scope": "/",
