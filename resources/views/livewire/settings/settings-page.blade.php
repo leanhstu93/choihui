@@ -42,8 +42,8 @@
     </section>
 
     <section class="rounded-xl bg-white p-4 shadow-sm">
-        <h2 class="font-semibold">Vai trò tài khoản</h2>
-        <p class="mt-1 text-sm text-gray-600">Đang là <strong>{{ $roleLabel }}</strong>. Chỉ đổi được khi tài khoản chưa có dây hụi nào.</p>
+        <h2 class="font-semibold">🤝 Sổ hụi: chơi hay làm chủ?</h2>
+        <p class="mt-1 text-sm text-gray-600">Đang dùng sổ hụi kiểu <strong>{{ mb_strtolower($roleLabel) }}</strong>. {{ $isHost ? 'Chuyển về hụi viên nếu bạn chỉ chơi hụi.' : 'Bạn làm chủ hụi, cần ghi hụi viên và thu chi? Chuyển sang chủ hụi.' }} Chỉ đổi được khi chưa có dây hụi nào; các sổ khác không bị ảnh hưởng.</p>
         <button type="button" wire:click="switchRole" wire:confirm="Chuyển sang {{ $isHost ? 'hụi viên' : 'chủ hụi' }}?" class="mt-3 rounded-lg border border-gray-300 px-4 py-2 text-sm">
             Chuyển sang {{ $isHost ? 'hụi viên' : 'chủ hụi' }}
         </button>

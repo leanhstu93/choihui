@@ -24,16 +24,20 @@ use Livewire\Volt\Volt;
  * Giao diện chủ hụi (document/04-chu-hui.md mục 7, CH-01..CH-09).
  */
 
-test('a new account can register as a host', function () {
+test('sign-up does not ask about hụi: new accounts start as members and can switch to host in settings', function () {
+    $this->get('/register')->assertOk()->assertDontSee('Làm chủ hụi')->assertDontSee('Chơi hụi');
+
     Volt::test('pages.auth.register')
         ->set('name', 'Cô Hoa')
         ->set('email', 'hoa@example.com')
         ->set('password', 'password')
         ->set('password_confirmation', 'password')
-        ->set('role', 'chu_hui')
         ->call('register')
-        ->assertRedirect(route('dashboard', absolute: false));
+        ->assertRedirect(route('net-worth', absolute: false));
 
+    expect(User::sole()->role)->toBe(UserRole::HuiVien);
+
+    Livewire::test(SettingsPage::class)->call('switchRole')->assertHasNoErrors();
     expect(User::sole()->role)->toBe(UserRole::ChuHui);
 });
 
