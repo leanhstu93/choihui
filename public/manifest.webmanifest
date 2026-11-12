@@ -1,7 +1,7 @@
 {
     "name": "Sổ tay",
     "short_name": "Sổ tay",
-    "description": "Sổ tay tài chính & gia đình: tài sản, hụi, vàng, sửa chữa, ngày nhớ, sức khỏe.",
+    "description": "Sổ tay tài chính & gia đình: ngày nhớ, sức khỏe, sửa chữa, vàng, tài sản.",
     "lang": "vi",
     "start_url": "/tong-tai-san",
     "scope": "/",

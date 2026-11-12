@@ -1,16 +1,16 @@
 @php
     /** @var array<string, string> $lunarLookup */
     $brand = config('app.name');
-    $title = $brand.' · Sổ tay tài chính & gia đình: tài sản, hụi, vàng, ngày giỗ, sức khỏe';
-    $description = 'Ứng dụng miễn phí ghi chép việc nhà: tổng tài sản, sổ hụi, sổ vàng, sửa chữa đồ dùng, ngày giỗ theo âm lịch và sức khỏe cả nhà. Tự tính, tự nhắc qua email.';
+    $title = $brand.' · Sổ tay gia đình: ngày giỗ âm lịch, sức khỏe, sửa chữa, vàng, tài sản';
+    $description = 'Ứng dụng miễn phí ghi chép việc nhà: ngày giỗ theo âm lịch, sức khỏe cả nhà, sửa chữa đồ dùng, vàng và tổng tài sản. Tự tính, tự nhắc qua email.';
 
     // Các cuốn sổ trong phần "Mỗi việc một cuốn sổ": khóa tab, tên, ba điểm chính.
     $books = [
-        'hui' => ['🤝', 'Hụi', [['✅', 'Kỳ này đóng bao nhiêu'], ['📈', 'Hốt kỳ nào thì lời'], ['👥', 'Chủ hụi: biết ngay ai chưa đóng']]],
-        'vang' => ['🪙', 'Vàng', [['⚖️', 'Ghi theo chỉ, từng món'], ['💹', 'Nhập giá tiệm, biết lời lỗ'], ['🧾', 'Bán một phần, vốn vẫn khớp']]],
-        'sua' => ['🔧', 'Sửa chữa', [['🛵', 'Xe, điện thoại, laptop...'], ['⏱️', 'Món thay dùng được bao lâu'], ['📷', 'Giữ ảnh hóa đơn, hạn bảo hành']]],
         'ngay' => ['🕯️', 'Ngày nhớ', [['🌙', 'Ngày âm tự đổi sang dương'], ['🔢', 'Tự đếm giỗ lần thứ mấy, tròn mấy tuổi'], ['📧', 'Nhắc trước, bạn chọn số ngày']]],
         'suc' => ['🩺', 'Sức khỏe', [['👨‍👩‍👧', 'Sổ riêng cho từng người'], ['📷', 'Giữ ảnh đơn thuốc, kết quả'], ['🔔', 'Nhắc ngày tái khám']]],
+        'sua' => ['🔧', 'Sửa chữa', [['🛵', 'Xe, điện thoại, laptop...'], ['⏱️', 'Món thay dùng được bao lâu'], ['📷', 'Giữ ảnh hóa đơn, hạn bảo hành']]],
+        'vang' => ['🪙', 'Vàng', [['⚖️', 'Ghi theo chỉ, từng món'], ['💹', 'Nhập giá tiệm, biết lời lỗ'], ['🧾', 'Bán một phần, vốn vẫn khớp']]],
+        'hui' => ['🤝', 'Hụi', [['✅', 'Kỳ này đóng bao nhiêu'], ['📈', 'Hốt kỳ nào thì lời'], ['👥', 'Chủ hụi: biết ngay ai chưa đóng']]],
     ];
 
     // Ngày âm hay tra: tên, ngày, tháng.
@@ -66,7 +66,7 @@
                             Chuyện tiền, chuyện nhà.<br>
                             <span class="text-emerald-700">Gọn trong một cuốn sổ.</span>
                         </h1>
-                        <p class="mt-4 text-lg text-gray-600">Tài sản, hụi, vàng, đồ sửa, ngày giỗ, sức khỏe cả nhà. App tự tính, tự đổi lịch âm, nhắc trước qua email.</p>
+                        <p class="mt-4 text-lg text-gray-600">Ngày giỗ, sức khỏe cả nhà, đồ sửa, vàng, tài sản. App tự tính, tự đổi lịch âm, nhắc trước qua email.</p>
                         <div class="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center md:justify-start">
                             <a href="{{ route('register') }}" class="rounded-full bg-emerald-700 px-7 py-3.5 text-center font-semibold text-white shadow-lg shadow-emerald-700/30 transition hover:-translate-y-0.5 hover:bg-emerald-800">Mở sổ miễn phí</a>
                             <a href="#cac-so" class="rounded-full border border-emerald-700 px-7 py-3.5 text-center font-semibold text-emerald-700 hover:bg-emerald-50">Xem có gì →</a>
@@ -74,7 +74,25 @@
                     </div>
 
                     <div class="animate-float">
-                        <x-landing.phone label="Trang tổng tài sản: tài sản ròng, biểu đồ theo tháng và ngày nhớ sắp tới">
+                        <x-landing.phone label="Sổ tay: hôm nay theo âm lịch, ngày giỗ, lịch tái khám và tài sản ròng">
+                            <div class="flex items-center gap-3 rounded-xl bg-white p-3 shadow-sm">
+                                <div class="flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-lg bg-emerald-50 text-emerald-800">
+                                    <span class="text-[9px] font-semibold">TH11</span><span class="font-bold leading-none">12</span>
+                                </div>
+                                <div><div class="text-gray-500">Hôm nay · Thứ Năm</div><div class="font-semibold">12/11/2026 · 4/10 ÂL</div></div>
+                            </div>
+                            <div class="rounded-xl bg-amber-50 p-3 text-amber-900">
+                                <div class="font-semibold">🕯️ Giỗ ông nội · 15/7 âm</div>
+                                <div class="mt-0.5">Giỗ lần thứ 12 · còn 3 ngày</div>
+                            </div>
+                            <div class="rounded-xl bg-sky-50 p-3 text-sky-900">
+                                <div class="font-semibold">🩺 Mẹ tái khám tim mạch</div>
+                                <div class="mt-0.5">Thứ Sáu tuần này</div>
+                            </div>
+                            <div class="rounded-xl bg-white p-3 shadow-sm">
+                                <div class="font-semibold">🛵 Xe Air Blade · thay nhớt</div>
+                                <div class="mt-0.5 text-gray-500">Lần trước cách đây 3 tháng</div>
+                            </div>
                             <div class="rounded-xl bg-emerald-700 p-3 text-white">
                                 <div class="text-emerald-100">Tài sản ròng</div>
                                 <div class="text-xl font-bold">186.400.000 đ</div>
@@ -84,22 +102,6 @@
                                     @endforeach
                                 </div>
                                 <div class="mt-1 flex justify-between text-[10px] text-emerald-100"><span>Th6</span><span>Th11</span></div>
-                            </div>
-                            <ul class="divide-y divide-gray-100 rounded-xl bg-white shadow-sm">
-                                @foreach ([['🪙', 'Vàng đang giữ', '142.500.000 đ', 'text-gray-900'], ['🤝', 'Hụi đã đóng', '52.000.000 đ', 'text-gray-900'], ['🤝', 'Hụi còn nợ', '−8.100.000 đ', 'text-red-600']] as [$icon, $label, $amount, $color])
-                                    <li class="flex items-center justify-between px-3 py-2">
-                                        <span><span aria-hidden="true">{{ $icon }}</span> {{ $label }}</span>
-                                        <span class="font-semibold {{ $color }}">{{ $amount }}</span>
-                                    </li>
-                                @endforeach
-                            </ul>
-                            <div class="rounded-xl bg-amber-50 p-3 text-amber-900">
-                                <div class="font-semibold">🕯️ Giỗ ông nội · 15/7 âm</div>
-                                <div class="mt-0.5">Giỗ lần thứ 12 · còn 3 ngày</div>
-                            </div>
-                            <div class="rounded-xl bg-sky-50 p-3 text-sky-900">
-                                <div class="font-semibold">🩺 Mẹ tái khám tim mạch</div>
-                                <div class="mt-0.5">Thứ Sáu tuần này</div>
                             </div>
                         </x-landing.phone>
                     </div>
@@ -123,7 +125,7 @@
             </section>
 
             {{-- 3. Các cuốn sổ: chuyển tab giữa các màn hình --}}
-            <section id="cac-so" class="mx-auto max-w-5xl scroll-mt-16 px-4 py-16" x-data="{ book: 'hui' }">
+            <section id="cac-so" class="mx-auto max-w-5xl scroll-mt-16 px-4 py-16" x-data="{ book: 'ngay' }">
                 <h2 class="text-center text-3xl font-bold">Mỗi việc một cuốn sổ</h2>
                 <p class="mt-2 text-center text-gray-600">Dùng cuốn nào mở cuốn đó. Tất cả gộp về trang Tổng.</p>
                 <div class="-mx-4 mt-6 overflow-x-auto px-4">
@@ -138,7 +140,7 @@
 
                 <div class="mt-10 grid items-center gap-10 md:grid-cols-2">
                     <div>
-                        <div x-show="book === 'hui'" x-transition.opacity.duration.300ms>
+                        <div x-show="book === 'hui'" x-cloak x-transition.opacity.duration.300ms>
                             <x-landing.phone label="Sổ hụi: chi tiết một dây hụi">
                                 <div class="rounded-xl bg-white p-3 shadow-sm">
                                     <div class="font-semibold">Hụi 1tr cô Hoa</div>
@@ -196,7 +198,7 @@
                             </x-landing.phone>
                         </div>
 
-                        <div x-show="book === 'ngay'" x-cloak x-transition.opacity.duration.300ms>
+                        <div x-show="book === 'ngay'" x-transition.opacity.duration.300ms>
                             <x-landing.phone label="Ngày nhớ: giỗ, sinh nhật, kỷ niệm sắp tới">
                                 <ul class="space-y-2">
                                     @foreach ([['🕯️', 'Giỗ ông nội', '15/7 âm · Giỗ lần thứ 12', 'còn 3 ngày', 'bg-amber-100 text-amber-800'], ['🎂', 'Sinh nhật bé Na', '20/11 · Tròn 6 tuổi', 'còn 8 ngày', 'bg-emerald-100 text-emerald-800'], ['💍', 'Kỷ niệm ngày cưới', '10/12 · 10 năm', 'còn 28 ngày', 'bg-gray-100 text-gray-600'], ['🕯️', 'Giỗ bà ngoại', '8/11 âm · Giỗ lần thứ 5', 'còn 35 ngày', 'bg-gray-100 text-gray-600']] as [$icon, $name, $detail, $left, $badge])
@@ -293,7 +295,7 @@
             <section class="mx-auto max-w-5xl px-4 py-16">
                 <h2 class="text-center text-3xl font-bold">3 bước là xong</h2>
                 <ol class="mt-10 grid gap-4 md:grid-cols-3">
-                    @foreach ([['1', '📝', 'Tạo tài khoản', '30 giây, miễn phí'], ['2', '📚', 'Mở cuốn sổ cần dùng', 'Hụi, vàng, gia đình...'], ['3', '🔔', 'Ghi một lần', 'App tự tính, tự nhắc']] as [$number, $icon, $heading, $sub])
+                    @foreach ([['1', '📝', 'Tạo tài khoản', '30 giây, miễn phí'], ['2', '📚', 'Mở cuốn sổ cần dùng', 'Ngày nhớ, sức khỏe, vàng...'], ['3', '🔔', 'Ghi một lần', 'App tự tính, tự nhắc']] as [$number, $icon, $heading, $sub])
                         <li class="relative rounded-3xl bg-emerald-50 p-6 text-center">
                             <span class="absolute left-4 top-4 flex h-8 w-8 items-center justify-center rounded-full bg-emerald-700 text-sm font-bold text-white">{{ $number }}</span>
                             <div class="text-5xl" aria-hidden="true">{{ $icon }}</div>
@@ -313,7 +315,7 @@
                         ['Ai xem được sổ của tôi?', 'Chỉ bạn. Mỗi tài khoản chỉ thấy dữ liệu của chính mình.'],
                         ['Có phải cài app không?', 'Không. Mở trên trình duyệt điện thoại, bấm "Thêm vào màn hình chính" là dùng như app.'],
                         ['Ngày giỗ theo âm lịch có tính đúng không?', 'Có. App đổi ngày âm sang dương theo giờ Việt Nam mỗi năm. Năm có tháng nhuận vẫn lấy tháng thường, đúng tục cúng giỗ.'],
-                        ['Tôi làm chủ hụi thì sao?', 'Có sổ riêng cho chủ hụi: ghi hụi viên, thu tiền 1 chạm, tự tính tiền chi và thảo.'],
+                        ['Tôi chỉ cần ghi ngày giỗ thôi được không?', 'Được. Mỗi việc một cuốn sổ riêng, cần cuốn nào dùng cuốn đó, không phải điền hết.'],
                     ] as [$question, $answer])
                         <details class="group rounded-2xl bg-gray-50 p-4 [&_summary::-webkit-details-marker]:hidden">
                             <summary class="flex cursor-pointer items-center justify-between font-semibold">
@@ -335,7 +337,7 @@
         </main>
 
         <footer class="px-4 py-6 text-center text-xs text-gray-400">
-            © {{ date('Y') }} {{ $brand }} · Công cụ ghi chép cá nhân, không nhận giữ tiền hay tổ chức hụi.
+            © {{ date('Y') }} {{ $brand }} · Công cụ ghi chép cá nhân, không nhận giữ tiền.
             · <a href="{{ route('privacy') }}" class="underline hover:text-gray-600">Chính sách bảo mật</a>
         </footer>
 
