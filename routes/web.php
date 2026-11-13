@@ -57,6 +57,9 @@ Route::get('/', fn (LunarDateLookup $lunar, YearCalendar $calendar) => auth()->c
 
 // Gửi file trực tiếp giữa hai thiết bị (không cần đăng nhập); ?ma= là mã phòng từ QR.
 Route::view('gui-file', 'transfer.show')->name('transfer.show');
+// "Chia sẻ" từ app khác (PWA share target). Service worker xử lý trước; tới được đây nghĩa là
+// service worker chưa chạy, file không giữ lại được: quay về trang và báo cho người dùng.
+Route::post('gui-file/chia-se', fn () => redirect()->route('transfer.show', ['chia-se' => 'loi'], 303))->name('transfer.share');
 
 // Lịch âm công khai (khối lịch trên trang giới thiệu và các trang /lich-am cho Google).
 Route::controller(LunarCalendarController::class)->name('lunar.')->group(function () {

@@ -8,7 +8,7 @@
         <meta name="robots" content="{{ $joinCode !== '' ? 'noindex' : 'index' }}">
     </x-slot:head>
 
-    <div x-data="fileTransfer({ apiBase: @js(url('api/gui-file/phong')), joinCode: @js($joinCode) })"
+    <div x-data="fileTransfer({ apiBase: @js(url('api/gui-file/phong')), joinCode: @js($joinCode), share: @js((string) request()->query('chia-se', '')) })"
         @dragover.window.prevent="if (phase === 'connected') dragging = true"
         @dragleave.window.prevent="if ($event.relatedTarget === null) dragging = false"
         @drop.window.prevent="dropFiles($event)"
@@ -18,6 +18,26 @@
         <p class="mt-2 flex items-start gap-2 rounded-2xl bg-emerald-50 p-3 text-sm text-emerald-900">
             <span aria-hidden="true">🔒</span>
             <span><b>File đi thẳng giữa hai thiết bị, được mã hóa, không lưu trên server.</b> Không cần cài app, không cần đăng nhập.</span>
+        </p>
+
+        {{-- File chia sẻ từ app khác, chờ kết nối để gửi --}}
+        <div x-show="shared.length > 0" class="mt-4 flex items-start gap-3 rounded-2xl bg-sky-50 p-4 text-sm text-sky-900" style="display: none">
+            <span class="text-xl" aria-hidden="true">📎</span>
+            <div class="min-w-0 flex-1">
+                <div class="font-semibold">Có <span x-text="sharedSummary"></span> đang chờ gửi</div>
+                <ul class="mt-1 space-y-0.5 text-sky-800">
+                    <template x-for="item in shared.slice(0, 3)" :key="item.file.name + item.file.size">
+                        <li class="truncate" x-text="item.file.name"></li>
+                    </template>
+                    <li x-show="shared.length > 3" x-text="`và ${shared.length - 3} file khác`"></li>
+                </ul>
+                <p class="mt-2">Mở trang này trên máy kia rồi quét mã QR (hoặc nhập mã). Kết nối xong, file sẽ được gửi ngay, máy kia bấm <b>Nhận</b> là xong.</p>
+            </div>
+            <button type="button" @click="dropShared()" class="shrink-0 rounded-full px-2 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100">Bỏ</button>
+        </div>
+        <p x-show="shareNotice" x-text="shareNotice" class="mt-4 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900" style="display: none"></p>
+        <p x-show="sharedText && ! ['connected', 'unstable', 'reconnecting'].includes(phase)" class="mt-4 flex items-start gap-2 rounded-2xl bg-sky-50 p-3 text-sm text-sky-900" style="display: none">
+            <span aria-hidden="true">📝</span><span>Đã nhận đoạn văn bản / link từ Chia sẻ. Kết nối với máy kia rồi bấm <b>Gửi văn bản</b>.</span>
         </p>
 
         {{-- Tạo mã / chờ máy kia / nhập mã --}}

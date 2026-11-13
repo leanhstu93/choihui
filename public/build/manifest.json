@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-ElEE7Q6S.css",
+    "file": "assets/app-lE7zNYeP.css",
     "name": "app",
     "names": [
       "app.css"
@@ -15,7 +15,7 @@
     "isEntry": true
   },
   "resources/js/transfer/transfer-ui.js": {
-    "file": "assets/transfer-ui-B9Fbhl9G.js",
+    "file": "assets/transfer-ui-Bim1t5F2.js",
     "name": "transfer-ui",
     "src": "resources/js/transfer/transfer-ui.js",
     "isEntry": true,

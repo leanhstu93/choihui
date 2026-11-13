@@ -87,6 +87,9 @@ export function fileTransfer(config) {
         kind: null,
         safety: null,
         safetyOpen: false,
+        shared: [],
+        sharedText: false,
+        shareNotice: '',
         files: [],
         offers: [],
         texts: [],
@@ -99,6 +102,12 @@ export function fileTransfer(config) {
         init() {
             this.storage = chooseStorage(this.env);
             clearOpfs();
+
+            if (config.share === '1') {
+                this.loadShared();
+            } else if (config.share === 'loi') {
+                this.shareNotice = 'Chưa nhận được file từ Chia sẻ. Hãy kết nối rồi bấm "Chọn file để gửi".';
+            }
 
             const code = (config.joinCode ?? '').trim();
             if (code) {
@@ -178,6 +187,12 @@ export function fileTransfer(config) {
                 handlers: {
                     onState: (phase, message = '', reason = '') => {
                         this.phase = phase;
+                        if (phase === 'connected' && this.shared.length > 0) {
+                            // File chia sẻ từ app khác: kết nối xong là mời máy kia nhận luôn.
+                            const items = this.shared;
+                            this.shared = [];
+                            this.sendFiles(items);
+                        }
                         if (phase === 'error' || phase === 'disconnected') {
                             this.message = message;
                             this.errorReason = reason;
@@ -242,6 +257,49 @@ export function fileTransfer(config) {
                 opfs: 'File được lưu tạm trong trình duyệt, nhận xong bấm "Lưu" để cất vào máy.',
                 memory: 'Trình duyệt này chỉ nhận được file nhỏ (dưới 500 MB).',
             }[this.storage];
+        },
+
+        // ----- File chia sẻ từ app khác (PWA share target, xem sw.js) -----
+
+        async loadShared() {
+            history.replaceState(null, '', location.pathname);
+
+            try {
+                const cache = await caches.open('gui-file-chia-se');
+                const meta = await (await cache.match('/__chia-se/meta'))?.json();
+                if (! meta) {
+                    return;
+                }
+                const items = [];
+                for (const entry of meta.files ?? []) {
+                    const blob = await (await cache.match(`/__chia-se/${entry.index}`))?.blob();
+                    if (blob) {
+                        items.push({ file: new File([blob], entry.name || 'file', { type: entry.type || blob.type, lastModified: entry.lastModified }), path: null });
+                    }
+                }
+                await caches.delete('gui-file-chia-se');
+
+                this.shared = items;
+                if (meta.text) {
+                    this.textDraft = meta.text;
+                    this.sharedText = true;
+                }
+                if (items.length === 0 && ! meta.text) {
+                    this.shareNotice = 'Không đọc được file vừa chia sẻ. Hãy kết nối rồi bấm "Chọn file để gửi".';
+                }
+            } catch {
+                this.shareNotice = 'Không đọc được file vừa chia sẻ. Hãy kết nối rồi bấm "Chọn file để gửi".';
+            }
+        },
+
+        get sharedSummary() {
+            const total = this.shared.reduce((sum, { file }) => sum + file.size, 0);
+
+            return `${this.shared.length} file · ${formatBytes(total)}`;
+        },
+
+        dropShared() {
+            this.shared = [];
         },
 
         // ----- Gửi -----

@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias(['pin' => EnsurePinUnlocked::class, 'role' => EnsureUserRole::class, 'admin' => EnsureUserIsAdmin::class, 'area' => RememberAppArea::class]);
         $middleware->web(append: [TouchLastSeen::class]);
+        // Chia sẻ file từ app khác (PWA share target) là POST do hệ điều hành gửi, không có token CSRF.
+        $middleware->validateCsrfTokens(except: ['gui-file/chia-se']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

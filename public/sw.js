@@ -6,6 +6,43 @@ self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
 
 /*
+ * "Chia sẻ" từ app khác (thư viện ảnh trên Android) vào Sổ tay: hệ điều hành POST file tới
+ * /gui-file/chia-se. Cất tạm file vào Cache của trình duyệt (trên máy, không lên server) rồi mở
+ * /gui-file?chia-se=1; trang lấy ra, chờ kết nối với máy kia rồi gửi và xóa ngay.
+ */
+const SHARE_CACHE = 'gui-file-chia-se';
+
+self.addEventListener('fetch', (event) => {
+    const url = new URL(event.request.url);
+    if (event.request.method !== 'POST' || url.pathname !== '/gui-file/chia-se') {
+        return;
+    }
+
+    event.respondWith((async () => {
+        try {
+            const form = await event.request.formData();
+            const files = form.getAll('files').filter((file) => file instanceof File && file.size > 0);
+            const text = ['title', 'text', 'url'].map((key) => form.get(key)).filter((value) => typeof value === 'string' && value.trim() !== '');
+            const cache = await caches.open(SHARE_CACHE);
+
+            for (const key of await cache.keys()) {
+                await cache.delete(key);
+            }
+            const meta = [];
+            for (const [index, file] of files.entries()) {
+                await cache.put(`/__chia-se/${index}`, new Response(file));
+                meta.push({ index, name: file.name, type: file.type, lastModified: file.lastModified });
+            }
+            await cache.put('/__chia-se/meta', new Response(JSON.stringify({ files: meta, text: [...new Set(text)].join('\n') })));
+
+            return Response.redirect('/gui-file?chia-se=1', 303);
+        } catch {
+            return Response.redirect('/gui-file?chia-se=loi', 303);
+        }
+    })());
+});
+
+/*
  * Gửi file trực tiếp (/gui-file): trang chuyển từng mảnh file nhận được qua MessagePort, service
  * worker phát thành một lượt tải về của trình duyệt (ghi thẳng xuống đĩa, không gom trong RAM).
  * Chỉ trả "pulled" khi hàng đợi còn chỗ, để trang không đẩy nhanh hơn đĩa ghi.
