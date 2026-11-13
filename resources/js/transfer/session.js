@@ -503,8 +503,10 @@ export class TransferSession {
      * Mời bên kia nhận các file này. Chưa gửi byte nào cho tới khi bên kia bấm Nhận.
      * Đang đi vòng qua trung chuyển thì mỗi lượt gửi chỉ được tới maxRelayBytes: trả về câu báo lỗi.
      */
-    offerFiles(files) {
-        const total = files.reduce((sum, file) => sum + file.size, 0);
+    offerFiles(items) {
+        // Nhận File hoặc { file, path } (path: đường dẫn tương đối khi gửi cả thư mục).
+        const list = items.map((item) => (item instanceof Blob ? { file: item, path: null } : item));
+        const total = list.reduce((sum, { file }) => sum + file.size, 0);
         const message = relayLimitMessage(total, this.isRelayed, this.room.maxRelayBytes);
 
         if (message) {
@@ -512,14 +514,14 @@ export class TransferSession {
         }
 
         const id = randomId();
-        const list = files.map((file) => ({ fid: randomId(), file }));
+        const entries = list.map(({ file, path }) => ({ fid: randomId(), file, path: path ?? null }));
 
-        for (const { fid, file } of list) {
+        for (const { fid, file, path } of entries) {
             this.outgoing.set(fid, { file, offerId: id, status: 'waiting' });
-            this.on.onFile(fid, { direction: 'out', name: file.name, size: file.size, status: 'waiting', done: 0 });
+            this.on.onFile(fid, { direction: 'out', name: path ?? file.name, size: file.size, status: 'waiting', done: 0 });
         }
 
-        this.sendControl({ t: 'offer', id, files: list.map(({ fid, file }) => ({ fid, name: file.name, size: file.size, type: file.type })) });
+        this.sendControl({ t: 'offer', id, files: entries.map(({ fid, file, path }) => ({ fid, name: file.name, size: file.size, type: file.type, path })) });
 
         return null;
     }
@@ -607,7 +609,7 @@ export class TransferSession {
 
         for (const file of offer.files) {
             this.accepted.set(file.fid, { ...file, openSink });
-            this.on.onFile(file.fid, { direction: 'in', name: file.name, size: file.size, status: 'queued', done: 0 });
+            this.on.onFile(file.fid, { direction: 'in', name: file.path ?? file.name, size: file.size, status: 'queued', done: 0 });
         }
         this.offers.delete(offerId);
         this.on.onOfferGone(offerId);
@@ -631,6 +633,8 @@ export class TransferSession {
             this.receiving.incoming.abort();
             this.receiving = null;
             this.dropping = true;
+        } else {
+            accepted.openSink.skip?.(fid);
         }
         this.on.onFile(fid, { status: 'cancelled', note: 'Bạn đã hủy' });
         this.sendControl({ t: 'cancel', fid });
@@ -741,7 +745,7 @@ export class TransferSession {
                 this.on.onText(message.text);
                 break;
             case 'offer': {
-                const offer = { id: message.id, files: message.files.map((file) => ({ fid: file.fid, name: String(file.name), size: file.size, type: String(file.type ?? '') })) };
+                const offer = { id: message.id, files: message.files.map((file) => ({ fid: file.fid, name: String(file.name), size: file.size, type: String(file.type ?? ''), path: typeof file.path === 'string' ? file.path : null })) };
                 offer.totalSize = offer.files.reduce((sum, file) => sum + file.size, 0);
                 this.offers.set(offer.id, offer);
                 this.on.onOffer(offer);
@@ -837,6 +841,8 @@ export class TransferSession {
                 this.receiving.incoming.abort();
                 this.receiving = null;
                 this.dropping = true;
+            } else {
+                accepted.openSink.skip?.(fid);
             }
             this.on.onFile(fid, { status: 'cancelled', note: 'Máy gửi đã hủy' });
         }
@@ -871,6 +877,7 @@ export class TransferSession {
         for (const [fid, accepted] of this.accepted) {
             if (! accepted.finished) {
                 accepted.finished = true;
+                accepted.openSink.skip?.(fid);
                 this.on.onFile(fid, { status: 'failed', note: 'Mất kết nối' });
             }
         }

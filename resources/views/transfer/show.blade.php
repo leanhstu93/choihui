@@ -118,10 +118,14 @@
                     <div class="font-semibold">📥 <span x-text="peer?.name ?? 'Máy kia'"></span> muốn gửi cho bạn <span x-text="offer.files.length"></span> file · <span x-text="formatBytes(offer.totalSize)"></span></div>
                     <ul class="mt-2 space-y-1 text-sm text-gray-700">
                         <template x-for="file in offer.files.slice(0, 5)" :key="file.fid">
-                            <li class="flex justify-between gap-3"><span class="truncate" x-text="file.name"></span><span class="shrink-0 text-gray-500" x-text="formatBytes(file.size)"></span></li>
+                            <li class="flex justify-between gap-3"><span class="truncate" x-text="file.path ?? file.name"></span><span class="shrink-0 text-gray-500" x-text="formatBytes(file.size)"></span></li>
                         </template>
                         <li x-show="offer.files.length > 5" class="text-gray-500" x-text="`và ${offer.files.length - 5} file khác`"></li>
                     </ul>
+                    <p x-show="offer.folder" class="mt-3 flex items-start gap-2 rounded-xl bg-sky-50 p-3 text-sm text-sky-900">
+                        <span aria-hidden="true">📁</span>
+                        <span x-text="storage === 'fs' ? `Thư mục “${offer.folder}” sẽ được tạo trong chỗ bạn chọn, giữ nguyên các thư mục con.` : `Trình duyệt này không ghi thẳng vào thư mục được, nên cả thư mục được gói thành một file “${offer.folder}.zip” (không nén, mở ra là đủ các thư mục con).`"></span>
+                    </p>
                     <p x-show="offer.check.warning" class="mt-3 rounded-xl p-3 text-sm" :class="offer.check.ok ? 'bg-amber-50 text-amber-900' : 'bg-rose-50 text-rose-800'" x-text="offer.check.warning"></p>
                     <p class="mt-2 text-xs text-gray-500" x-text="storageNote"></p>
                     <div class="mt-4 grid grid-cols-2 gap-2">
@@ -132,12 +136,20 @@
             </template>
 
             {{-- Gửi file --}}
-            <label class="block cursor-pointer rounded-3xl border-2 border-dashed bg-white p-6 text-center shadow-sm transition" :class="dragging ? 'border-emerald-500 bg-emerald-50' : 'border-gray-300 hover:border-emerald-400'">
-                <input type="file" multiple class="sr-only" @change="pickFiles($event)">
+            <div class="rounded-3xl border-2 border-dashed bg-white p-6 text-center shadow-sm transition" :class="dragging ? 'border-emerald-500 bg-emerald-50' : 'border-gray-300'">
                 <div class="text-4xl" aria-hidden="true">📤</div>
-                <div class="mt-2 text-lg font-semibold">Chọn file để gửi</div>
-                <div class="text-sm text-gray-500"><span class="hidden sm:inline">hoặc kéo thả vào đây · </span>gửi nhiều file một lúc, <span x-text="kind === 'relay' && room?.maxRelayBytes ? `tối đa ${formatBytes(room.maxRelayBytes)} mỗi lượt` : 'không giới hạn dung lượng'"></span></div>
-            </label>
+                <div class="mt-2 flex flex-col justify-center gap-2 sm:flex-row">
+                    <label class="cursor-pointer rounded-xl bg-emerald-700 px-6 py-3 text-lg font-semibold text-white hover:bg-emerald-800 focus-within:outline focus-within:outline-2 focus-within:outline-emerald-600">
+                        <input type="file" multiple class="sr-only" @change="pickFiles($event)">
+                        Chọn file để gửi
+                    </label>
+                    <label x-show="canPickFolder" class="cursor-pointer rounded-xl border border-emerald-700 px-5 py-3 font-semibold text-emerald-800 hover:bg-emerald-50 focus-within:outline focus-within:outline-2 focus-within:outline-emerald-600">
+                        <input type="file" webkitdirectory multiple class="sr-only" @change="pickFolder($event)">
+                        📁 Chọn thư mục
+                    </label>
+                </div>
+                <div class="mt-3 text-sm text-gray-500"><span class="hidden sm:inline">hoặc kéo thả file, thư mục vào đây · </span>gửi nhiều file một lúc, <span x-text="kind === 'relay' && room?.maxRelayBytes ? `tối đa ${formatBytes(room.maxRelayBytes)} mỗi lượt` : 'không giới hạn dung lượng'"></span></div>
+            </div>
             <p x-show="message && phase === 'connected'" x-text="message" class="text-sm font-medium text-rose-700"></p>
 
             {{-- Gửi văn bản / link --}}

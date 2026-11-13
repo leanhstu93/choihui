@@ -1,3 +1,4 @@
+import { collectDropped, directoryFor, folderName, fromDirectoryInput, safePathSegments, ZipAssembler } from './folder.js';
 import { randomId, safeFileName } from './protocol.js';
 import { request } from './signaling.js';
 import { clearOpfs, FsSink, MemorySink, OpfsSink, StreamSink } from './sinks.js';
@@ -26,6 +27,7 @@ const STATUS_LABELS = {
     sending: 'Đang gửi',
     receiving: 'Đang nhận',
     paused: 'Tạm dừng, sẽ gửi tiếp khi nối lại',
+    zipping: 'Đang gói thành .zip',
     rejected: 'Bị từ chối',
     cancelled: 'Đã hủy',
     failed: 'Lỗi',
@@ -49,6 +51,20 @@ async function uniqueFileHandle(directory, name) {
     }
 
     return directory.getFileHandle(`${base}-${randomId()}${ext}`, { create: true });
+}
+
+/** Tên thư mục chưa có: "Ảnh", "Ảnh (1)", ... */
+async function uniqueDirectoryName(parent, name) {
+    for (let index = 0; index < 1000; index++) {
+        const candidate = index === 0 ? name : `${name} (${index})`;
+        try {
+            await parent.getDirectoryHandle(candidate);
+        } catch {
+            return candidate;
+        }
+    }
+
+    return `${name}-${randomId()}`;
 }
 
 /**
@@ -235,15 +251,36 @@ export function fileTransfer(config) {
             event.target.value = '';
         },
 
-        dropFiles(event) {
-            this.dragging = false;
-            const files = [...(event.dataTransfer?.files ?? [])].filter((file) => file.size > 0 || file.type !== '');
-            if (files.length === 0 && event.dataTransfer?.files?.length) {
-                this.message = 'Chưa gửi được cả thư mục. Hãy mở thư mục và chọn các file bên trong.';
+        pickFolder(event) {
+            const items = fromDirectoryInput(event.target.files);
+            event.target.value = '';
+            if (items.length === 0) {
+                this.message = 'Thư mục này trống, chưa có file nào để gửi.';
 
                 return;
             }
-            this.sendFiles(files);
+            this.sendFiles(items);
+        },
+
+        async dropFiles(event) {
+            this.dragging = false;
+            // Phải đọc ngay trong sự kiện drop (kể cả thư mục bên trong).
+            const pending = collectDropped(event.dataTransfer);
+            try {
+                const items = await pending;
+                if (items.length === 0) {
+                    this.message = 'Không đọc được file vừa thả. Hãy bấm "Chọn file" hoặc "Chọn thư mục".';
+
+                    return;
+                }
+                this.sendFiles(items);
+            } catch {
+                this.message = 'Không đọc được thư mục vừa thả. Hãy bấm "Chọn thư mục" để chọn lại.';
+            }
+        },
+
+        get canPickFolder() {
+            return ! this.env.isMobile && 'webkitdirectory' in document.createElement('input');
         },
 
         sendFiles(files) {
@@ -280,7 +317,7 @@ export function fileTransfer(config) {
             const existing = this.offers.find((item) => item.id === offer.id);
             const estimate = this.storage === 'opfs' ? await navigator.storage?.estimate?.().catch(() => null) : null;
             const check = checkCapacity({ storage: this.storage, totalSize: offer.totalSize, estimate, isIos: this.env.isIos });
-            const card = { ...offer, files: [...offer.files], check, busy: false };
+            const card = { ...offer, files: [...offer.files], check, busy: false, folder: folderName(offer.files) };
 
             if (existing) {
                 Object.assign(existing, card);
@@ -295,13 +332,32 @@ export function fileTransfer(config) {
 
             try {
                 if (this.storage === 'fs') {
-                    if (offer.files.length === 1) {
+                    if (offer.folder) {
+                        // Dựng lại cây thư mục trong chỗ người dùng chọn; trùng tên thì thêm (1), (2)…
+                        const root = await window.showDirectoryPicker({ id: 'gui-file', mode: 'readwrite' });
+                        const roots = new Map();
+                        openSink = async (file) => {
+                            const segments = safePathSegments(file.path);
+                            const parts = segments.length > 0 ? segments : [safeFileName(file.name)];
+                            if (parts.length > 1) {
+                                if (! roots.has(parts[0])) {
+                                    roots.set(parts[0], uniqueDirectoryName(root, parts[0]));
+                                }
+                                parts[0] = await roots.get(parts[0]);
+                            }
+                            const directory = await directoryFor(root, parts.slice(0, -1));
+
+                            return FsSink.fromHandle(await uniqueFileHandle(directory, parts.at(-1)));
+                        };
+                    } else if (offer.files.length === 1) {
                         const handle = await window.showSaveFilePicker({ suggestedName: safeFileName(offer.files[0].name) });
                         openSink = () => FsSink.fromHandle(handle);
                     } else {
                         const directory = await window.showDirectoryPicker({ id: 'gui-file', mode: 'readwrite' });
                         openSink = (file) => uniqueFileHandle(directory, file.name).then((handle) => FsSink.fromHandle(handle));
                     }
+                } else if (offer.folder) {
+                    openSink = this.zipSinks(offer);
                 } else if (this.storage === 'stream') {
                     openSink = (file) => StreamSink.open(file.name, file.size);
                 } else if (this.storage === 'opfs') {
@@ -320,6 +376,36 @@ export function fileTransfer(config) {
 
             session.accept(offer.id, openSink);
             this.requestWakeLock();
+        },
+
+        /**
+         * Trình duyệt không ghi thẳng vào thư mục được: gói cả thư mục thành một .zip trong lúc nhận.
+         * Thêm một dòng "Tên.zip" vào danh sách, xong thì lưu được như file thường.
+         */
+        zipSinks(offer) {
+            const zipFid = `zip-${offer.id}`;
+            const zipName = `${offer.folder}.zip`;
+            const zip = new ZipAssembler({
+                files: offer.files,
+                openTarget: (size) => {
+                    if (this.storage === 'stream') {
+                        return StreamSink.open(zipName, size);
+                    }
+                    if (this.storage === 'opfs') {
+                        return OpfsSink.open(zipName, 'application/zip');
+                    }
+
+                    return Promise.resolve(new MemorySink(zipName, 'application/zip'));
+                },
+                onDone: (result) => this.patchFile(zipFid, { status: 'done', done: zip.length, result, note: '' }),
+                onError: (error) => this.patchFile(zipFid, { status: 'failed', note: error.message }),
+            });
+            this.patchFile(zipFid, { direction: 'in', name: zipName, size: zip.length, status: 'zipping', done: 0, note: `Gói ${offer.files.length} file của thư mục` });
+
+            const openSink = (file) => Promise.resolve(zip.sinkFor(file.fid));
+            openSink.skip = (fid) => zip.skip(fid);
+
+            return openSink;
         },
 
         reject(offer) {

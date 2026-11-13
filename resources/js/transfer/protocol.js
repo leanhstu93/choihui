@@ -42,7 +42,8 @@ export function parseMessage(text) {
 
     if (message.t === 'offer') {
         const valid = typeof message.id === 'string' && Array.isArray(message.files) && message.files.length > 0
-            && message.files.every((file) => typeof file.fid === 'string' && typeof file.name === 'string' && Number.isSafeInteger(file.size) && file.size >= 0);
+            && message.files.every((file) => typeof file.fid === 'string' && typeof file.name === 'string' && Number.isSafeInteger(file.size) && file.size >= 0
+                && (file.path === undefined || file.path === null || (typeof file.path === 'string' && file.path.length <= 1000)));
 
         return valid ? message : null;
     }
