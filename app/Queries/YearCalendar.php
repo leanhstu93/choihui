@@ -4,14 +4,15 @@ declare(strict_types=1);
 
 namespace App\Queries;
 
-use App\Domain\LunarCalendar;
-use App\Domain\TetCountdown;
+use App\Domain\CanChi;
+use App\Domain\LunarDayInfo;
 use App\Domain\VietnamHolidays;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * Lịch âm dương một năm cho phần lịch trên trang giới thiệu: ngày âm của từng ngày và các ngày lễ.
+ * Lịch âm dương một năm cho khối lịch (trang giới thiệu và các trang /lich-am): thông tin từng ngày
+ * dạng gọn của LunarDayInfo::toCompact() và các ngày lễ.
  */
 final class YearCalendar
 {
@@ -19,14 +20,19 @@ final class YearCalendar
 
     public const MAX_YEAR = 2100;
 
+    public static function supports(int $year): bool
+    {
+        return $year >= self::MIN_YEAR && $year <= self::MAX_YEAR;
+    }
+
     /**
-     * months[m - 1][d - 1] = [ngày âm, tháng âm, nhuận 0/1, năm âm].
+     * months[m - 1][d - 1] là LunarDayInfo::toCompact() của ngày d/m.
      *
-     * @return array{year: int, months: list<list<array{int, int, int, int}>>, yearNames: array<int, string>, holidays: list<array{date: string, name: string, icon: string, dayOff: bool, lunar: ?string}>}
+     * @return array{year: int, months: list<list<array{int, int, int, int, int, int, int, int, int, int, int, int}>>, yearNames: array<int, string>, holidays: list<array{date: string, name: string, icon: string, dayOff: bool, lunar: ?string, about: string}>}
      */
     public function forYear(int $year): array
     {
-        return Cache::remember("calendar:year:v1:{$year}", now()->addDays(30), function () use ($year): array {
+        return Cache::remember("calendar:year:v2:{$year}", now()->addDays(30), function () use ($year): array {
             $months = [];
             $yearNames = [];
 
@@ -35,9 +41,9 @@ final class YearCalendar
                 $daysInMonth = (int) (new DateTimeImmutable(sprintf('%04d-%02d-01', $year, $month)))->format('t');
 
                 foreach (range(1, $daysInMonth) as $day) {
-                    $lunar = LunarCalendar::fromSolar(new DateTimeImmutable(sprintf('%04d-%02d-%02d', $year, $month, $day)));
-                    $days[] = [$lunar->day, $lunar->month, $lunar->isLeap ? 1 : 0, $lunar->year];
-                    $yearNames[$lunar->year] ??= TetCountdown::yearName($lunar->year);
+                    $info = LunarDayInfo::of(new DateTimeImmutable(sprintf('%04d-%02d-%02d', $year, $month, $day)));
+                    $days[] = $info->toCompact();
+                    $yearNames[$info->lunar->year] ??= CanChi::yearName($info->lunar->year);
                 }
 
                 $months[] = $days;
@@ -49,6 +55,7 @@ final class YearCalendar
                 'icon' => $holiday['icon'],
                 'dayOff' => $holiday['dayOff'],
                 'lunar' => $holiday['lunar']?->label(),
+                'about' => $holiday['about'],
             ], VietnamHolidays::forYear($year));
 
             return ['year' => $year, 'months' => $months, 'yearNames' => $yearNames, 'holidays' => $holidays];

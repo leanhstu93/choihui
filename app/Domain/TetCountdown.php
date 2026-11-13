@@ -13,12 +13,6 @@ use DateTimeImmutable;
  */
 final readonly class TetCountdown
 {
-    private const CAN = ['Giáp', 'Ất', 'Bính', 'Đinh', 'Mậu', 'Kỷ', 'Canh', 'Tân', 'Nhâm', 'Quý'];
-
-    private const CHI = ['Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi', 'Thân', 'Dậu', 'Tuất', 'Hợi'];
-
-    private const CHI_ICON = ['🐭', '🐃', '🐯', '🐱', '🐲', '🐍', '🐴', '🐐', '🐵', '🐔', '🐶', '🐷'];
-
     public function __construct(
         public DateTimeImmutable $tet,
         public int $daysLeft,
@@ -47,7 +41,7 @@ final readonly class TetCountdown
      */
     public static function yearName(int $lunarYear): string
     {
-        return self::CAN[($lunarYear + 6) % 10].' '.self::CHI[($lunarYear + 8) % 12];
+        return CanChi::yearName($lunarYear);
     }
 
     public function name(): string
@@ -57,7 +51,7 @@ final readonly class TetCountdown
 
     public function icon(): string
     {
-        return self::CHI_ICON[($this->lunarYear + 8) % 12];
+        return CanChi::CHI_ICON[CanChi::yearChi($this->lunarYear)];
     }
 
     public function isTet(): bool

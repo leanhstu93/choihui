@@ -121,6 +121,22 @@ final class LunarCalendar
     /**
      * Số thứ tự của tháng âm chứa ngày Julian $dayNumber.
      */
+    /**
+     * Số ngày Julian của một ngày dương (dùng tính can chi ngày).
+     */
+    public static function julianDayOf(DateTimeInterface $date): int
+    {
+        return self::julianDay((int) $date->format('j'), (int) $date->format('n'), (int) $date->format('Y'));
+    }
+
+    /**
+     * Tiết khí (0 = Xuân phân … 23 = Kinh trập) của ngày dương, tính theo vị trí mặt trời cuối ngày.
+     */
+    public static function solarTerm(DateTimeInterface $date): int
+    {
+        return (int) floor(self::sunLongitude(self::julianDayOf($date) + 1) / M_PI * 12);
+    }
+
     private static function monthIndex(int $dayNumber): int
     {
         $index = (int) floor(($dayNumber - self::EPOCH) / self::SYNODIC_MONTH);
@@ -231,6 +247,14 @@ final class LunarCalendar
      */
     private static function sunLongitudeSector(int $dayNumber): int
     {
+        return (int) floor(self::sunLongitude($dayNumber) / M_PI * 6);
+    }
+
+    /**
+     * Kinh độ mặt trời (radian, 0 tới 2π) lúc 0 giờ ngày Julian $dayNumber theo giờ Việt Nam.
+     */
+    private static function sunLongitude(int $dayNumber): float
+    {
         $t = ($dayNumber - 2451545.5 - self::TIME_ZONE / 24) / 36525;
         $t2 = $t * $t;
         $dr = M_PI / 180;
@@ -243,9 +267,8 @@ final class LunarCalendar
 
         $omega = 125.04 - 1934.136 * $t;
         $longitude = ($l0 + $dl - 0.00569 - 0.00478 * sin($omega * $dr)) * $dr;
-        $longitude -= M_PI * 2 * floor($longitude / (M_PI * 2));
 
-        return (int) floor($longitude / M_PI * 6);
+        return $longitude - M_PI * 2 * floor($longitude / (M_PI * 2));
     }
 
     /**

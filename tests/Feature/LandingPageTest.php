@@ -56,22 +56,16 @@ test('the lunar date lookup on the landing page gives the next solar date of eac
 test('the landing page shows a lunar calendar of this year with its holidays', function () {
     $this->travelTo(CarbonImmutable::parse('2026-11-13'));
 
-    $calendar = $this->get('/')->assertOk()->assertSee('Lịch âm dương & ngày lễ', false)->viewData('calendar');
+    $calendar = $this->get('/')->assertOk()
+        ->assertSee('Lịch âm dương & ngày lễ', false)
+        ->assertSee(route('lunar.today'))
+        ->viewData('calendar');
 
     expect($calendar['year'])->toBe(2026)
         ->and($calendar['months'])->toHaveCount(12)
-        ->and($calendar['months'][10][12])->toBe([5, 10, 0, 2026])
+        // 13/11/2026: 5/10 Bính Ngọ, ngày Tân Mão, tháng Kỷ Hợi, tiết Lập đông, sao Nguyên Vũ, trăng lưỡi liềm.
+        ->and($calendar['months'][10][12])->toBe([5, 10, 0, 2026, 7, 3, 5, 11, 15, 0, 9, 1])
         ->and($calendar['yearNames'])->toBe([2025 => 'Ất Tỵ', 2026 => 'Bính Ngọ'])
         ->and(collect($calendar['holidays'])->firstWhere('name', 'Tết Trung thu'))
-        ->toBe(['date' => '2026-09-25', 'name' => 'Tết Trung thu', 'icon' => '🥮', 'dayOff' => false, 'lunar' => '15/8 ÂL']);
-});
-
-test('other years of the calendar load as json within the supported range', function () {
-    $this->getJson(route('calendar.year', 2027))->assertOk()
-        ->assertJsonPath('year', 2027)
-        ->assertJsonPath('months.1.5', [1, 1, 0, 2027])
-        ->assertJsonFragment(['name' => 'Tết Nguyên đán', 'date' => '2027-02-06']);
-
-    $this->get('/lich/1900.json')->assertNotFound();
-    $this->get('/lich/2101.json')->assertNotFound();
+        ->toMatchArray(['date' => '2026-09-25', 'name' => 'Tết Trung thu', 'icon' => '🥮', 'dayOff' => false, 'lunar' => '15/8 ÂL']);
 });

@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\BackupDownloadController;
 use App\Http\Controllers\GoldPhotoController;
 use App\Http\Controllers\HealthPhotoController;
+use App\Http\Controllers\LunarCalendarController;
 use App\Http\Controllers\RepairPhotoController;
 use App\Livewire\Admin\Dashboard as AdminDashboard;
 use App\Livewire\Admin\GroupShow as AdminGroupShow;
@@ -53,18 +54,21 @@ Route::get('/', fn (LunarDateLookup $lunar, YearCalendar $calendar) => auth()->c
     ? redirect()->route('net-worth')
     : view('welcome', ['lunarLookup' => $lunar->from(CarbonImmutable::today()), 'calendar' => $calendar->forYear(CarbonImmutable::today()->year)]))->name('home');
 
-// Lịch âm dương một năm cho phần lịch trên trang giới thiệu (tải khi chuyển sang năm khác).
-Route::get('lich/{year}.json', function (int $year, YearCalendar $calendar) {
-    abort_unless($year >= YearCalendar::MIN_YEAR && $year <= YearCalendar::MAX_YEAR, 404);
-
-    return response()->json($calendar->forYear($year))->header('Cache-Control', 'public, max-age=86400');
-})->whereNumber('year')->name('calendar.year');
+// Lịch âm công khai (khối lịch trên trang giới thiệu và các trang /lich-am cho Google).
+Route::controller(LunarCalendarController::class)->name('lunar.')->group(function () {
+    Route::get('lich/{year}.json', 'data')->whereNumber('year')->name('data');
+    Route::get('lich/{year}.ics', 'ics')->whereNumber('year')->name('ics');
+    Route::get('lich-am', 'today')->name('today');
+    Route::get('lich-am/{year}', 'year')->where('year', '[0-9]{4}')->name('year');
+    Route::get('lich-am/{year}/{month}', 'month')->where(['year' => '[0-9]{4}', 'month' => '[0-9]{1,2}'])->name('month');
+    Route::get('lich-am/{date}', 'day')->where('date', '[0-9]{4}-[0-9]{2}-[0-9]{2}')->name('day');
+});
 
 // SEO: sinh theo APP_URL để đổi tên miền không phải sửa file.
-Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /tong-tai-san\nDisallow: /vang\nDisallow: /sua-chua\nDisallow: /gia-dinh\nDisallow: /quan-tri\nSitemap: ".url('sitemap.xml')."\n")
+Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /tong-tai-san\nDisallow: /vang\nDisallow: /sua-chua\nDisallow: /gia-dinh\nDisallow: /quan-tri\nDisallow: /lich/\nSitemap: ".url('sitemap.xml')."\n")
     ->header('Content-Type', 'text/plain; charset=UTF-8'))->name('robots');
 Route::view('chinh-sach', 'privacy')->name('privacy');
-Route::get('sitemap.xml', fn () => response()->view('sitemap')->header('Content-Type', 'application/xml; charset=UTF-8'))->name('sitemap');
+Route::get('sitemap.xml', fn () => response()->view('sitemap', ['year' => CarbonImmutable::today()->year])->header('Content-Type', 'application/xml; charset=UTF-8'))->name('sitemap');
 
 Route::middleware('auth')->group(function () {
     Route::get('unlock', UnlockPage::class)->name('unlock');
