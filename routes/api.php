@@ -11,6 +11,8 @@ Route::controller(TransferRoomController::class)->prefix('gui-file/phong')->name
     Route::post('{code}/vao', 'join')->middleware('throttle:transfer-signal')->name('join');
     Route::post('{code}/tin', 'signal')->middleware('throttle:transfer-signal')->name('signal');
     Route::get('{code}/tin', 'poll')->middleware('throttle:transfer-signal')->name('poll');
+    Route::post('{code}/moi', 'invite')->middleware('throttle:transfer-signal')->name('invite');
+    Route::post('{code}/tu-choi', 'decline')->middleware('throttle:transfer-signal')->name('decline');
     Route::post('{code}/turn', 'turn')->middleware('throttle:transfer-turn')->name('turn');
     Route::delete('{code}', 'destroy')->middleware('throttle:transfer-signal')->name('destroy');
 });

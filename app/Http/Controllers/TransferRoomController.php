@@ -6,11 +6,15 @@ namespace App\Http\Controllers;
 
 use App\Actions\Transfer\CloseTransferRoom;
 use App\Actions\Transfer\CreateTransferRoom;
+use App\Actions\Transfer\DeclineNearbyInvite;
+use App\Actions\Transfer\InviteNearbyDevice;
 use App\Actions\Transfer\IssueTurnCredentials;
 use App\Actions\Transfer\JoinTransferRoom;
 use App\Actions\Transfer\PostTransferSignal;
 use App\Actions\Transfer\PullTransferSignals;
+use App\Actions\Transfer\SyncNearbyPresence;
 use App\Actions\Transfer\TurnQuota;
+use App\Domain\NetworkKey;
 use App\Domain\RoomCode;
 use App\Enums\TransferRole;
 use App\Exceptions\TransferRoomException;
@@ -88,16 +92,49 @@ final class TransferRoomController
         });
     }
 
-    public function poll(Request $request, string $code, PullTransferSignals $pullSignals): JsonResponse
+    public function poll(Request $request, string $code, PullTransferSignals $pullSignals, SyncNearbyPresence $syncNearby): JsonResponse
     {
-        return $this->withRoom($request, $code, function (TransferRoom $room, TransferRole $role) use ($request, $pullSignals): JsonResponse {
+        return $this->withRoom($request, $code, function (TransferRoom $room, TransferRole $role) use ($request, $pullSignals, $syncNearby): JsonResponse {
             $signals = $pullSignals->handle($room, $role, max(0, $request->integer('after')));
-
-            return response()->json([
+            $response = [
                 'signals' => $signals->map(fn (TransferSignal $signal): array => ['id' => $signal->id, 'payload' => $signal->payload])->values(),
                 'peerJoined' => $room->hasReceiver(),
                 'expiresAt' => $room->expiresAt()->toIso8601String(),
-            ]);
+            ];
+
+            // Máy đang chờ (chưa ai vào) và đang dùng wifi: báo có mặt, lấy danh sách máy cùng mạng.
+            if ($role === TransferRole::Sender && $request->boolean('nearby')) {
+                $response['nearby'] = $syncNearby->handle($room, $this->networkHash($request), (string) $request->query('name', ''), (string) $request->query('device', ''));
+            }
+
+            return response()->json($response);
+        });
+    }
+
+    /**
+     * Mời một máy cùng mạng kết nối (máy kia phải đồng ý).
+     */
+    public function invite(Request $request, string $code, InviteNearbyDevice $inviteNearby): JsonResponse
+    {
+        return $this->withRoom($request, $code, function (TransferRoom $room, TransferRole $role) use ($request, $inviteNearby): JsonResponse {
+            if ($role !== TransferRole::Sender) {
+                throw TransferRoomException::forbidden();
+            }
+            $inviteNearby->handle($room, $this->networkHash($request), (string) $request->input('to', ''));
+
+            return response()->json(null, 204);
+        });
+    }
+
+    /**
+     * Từ chối lời mời kết nối từ máy cùng mạng.
+     */
+    public function decline(Request $request, string $code, DeclineNearbyInvite $declineInvite): JsonResponse
+    {
+        return $this->withRoom($request, $code, function (TransferRoom $room) use ($declineInvite): JsonResponse {
+            $declineInvite->handle($room);
+
+            return response()->json(null, 204);
         });
     }
 
@@ -184,6 +221,11 @@ final class TransferRoomController
         $stun = config('services.transfer.stun_urls', []);
 
         return $stun === [] ? [] : [['urls' => array_values($stun)]];
+    }
+
+    private function networkHash(Request $request): ?string
+    {
+        return NetworkKey::of((string) $request->ip(), (string) config('app.key'));
     }
 
     private function error(TransferRoomException $exception): JsonResponse

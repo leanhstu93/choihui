@@ -64,4 +64,9 @@ final class TransferRoomException extends RuntimeException
     {
         return new self('turn_monthly_limit', self::MONTHLY_LIMIT_MESSAGE, 429);
     }
+
+    public static function nearbyGone(): self
+    {
+        return new self('nearby_gone', 'Máy đó không còn mở trang hoặc đã kết nối với máy khác. Hãy thử lại, hoặc dùng mã phòng / mã QR.', 404);
+    }
 }

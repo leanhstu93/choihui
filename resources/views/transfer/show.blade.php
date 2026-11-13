@@ -61,6 +61,52 @@
 
             <div x-show="phase === 'creating'" class="mt-4 text-sm text-gray-500">Đang tạo mã…</div>
 
+            {{-- Lời mời từ máy cùng wifi --}}
+            <div x-show="nearbyInvite" class="mt-5 rounded-2xl bg-emerald-50 p-4 ring-2 ring-emerald-500" style="display: none" role="alertdialog" aria-live="assertive">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl" aria-hidden="true" x-text="deviceIcon(nearbyInvite?.device)"></span>
+                    <div class="min-w-0">
+                        <div class="font-semibold"><span x-text="nearbyInvite?.name"></span> muốn kết nối với máy này</div>
+                        <div class="text-sm text-gray-600" x-text="`${nearbyInvite?.device ?? ''} · cùng mạng wifi`"></div>
+                    </div>
+                </div>
+                <p class="mt-2 text-xs text-gray-600">Chỉ đồng ý nếu bạn nhận ra máy này. Kết nối xong vẫn phải bấm Nhận cho từng lượt file.</p>
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                    <button type="button" @click="declineInvite()" class="rounded-xl border border-gray-300 bg-white py-2.5 font-semibold text-gray-700 hover:bg-gray-50">Từ chối</button>
+                    <button type="button" @click="acceptInvite()" class="rounded-xl bg-emerald-700 py-2.5 font-semibold text-white hover:bg-emerald-800">Đồng ý</button>
+                </div>
+            </div>
+
+            {{-- Máy cùng wifi: bấm là mời, khỏi quét mã --}}
+            <div x-show="phase === 'waiting'" class="mt-5 border-t border-gray-100 pt-5">
+                <div class="flex items-center justify-between gap-2">
+                    <h2 class="text-sm font-semibold text-gray-700">📡 Máy cùng wifi</h2>
+                    <span x-show="! onCellular" class="flex items-center gap-1.5 text-xs text-gray-500"><span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500"></span> đang tìm</span>
+                </div>
+                <p x-show="onCellular" class="mt-2 rounded-xl bg-gray-50 p-3 text-sm text-gray-600">Máy này đang dùng 4G nên không tìm máy quanh đây. Bật wifi (cùng mạng với máy kia), hoặc dùng mã QR bên trên.</p>
+                <template x-if="! onCellular">
+                    <div>
+                        <div x-show="nearby.length > 0" class="mt-2 grid gap-2 sm:grid-cols-2">
+                            <template x-for="device in nearby" :key="device.id">
+                                <button type="button" @click="invite(device)" :disabled="nearbyInviting !== null"
+                                    class="flex items-center gap-3 rounded-2xl border border-gray-200 p-3 text-left transition hover:border-emerald-400 hover:bg-emerald-50 disabled:opacity-60">
+                                    <span class="text-2xl" aria-hidden="true" x-text="deviceIcon(device.device)"></span>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block truncate font-semibold" x-text="device.name"></span>
+                                        <span class="block truncate text-xs text-gray-500" x-text="nearbyInviting?.id === device.id ? 'Đang chờ máy kia đồng ý…' : device.device"></span>
+                                    </span>
+                                    <span class="shrink-0 rounded-full bg-emerald-700 px-3 py-1 text-xs font-semibold text-white" x-show="nearbyInviting?.id !== device.id">Kết nối</span>
+                                    <span class="h-4 w-4 shrink-0 animate-spin rounded-full border-2 border-emerald-200 border-t-emerald-700" x-show="nearbyInviting?.id === device.id"></span>
+                                </button>
+                            </template>
+                        </div>
+                        <p x-show="nearby.length === 0" class="mt-2 rounded-xl bg-gray-50 p-3 text-sm text-gray-600">Chưa thấy máy nào. Mở <b>{{ str_replace(['https://', 'http://'], '', route('transfer.show')) }}</b> trên máy kia (cùng wifi) là máy đó hiện ở đây, bấm vào để kết nối.</p>
+                        <p x-show="nearbyNote" x-text="nearbyNote" class="mt-2 text-sm font-medium text-rose-700"></p>
+                        <p class="mt-2 text-xs text-gray-400">Chỉ máy cùng mạng thấy tên ngẫu nhiên của máy này (<span x-text="me.name"></span>). Không ai kết nối được nếu bạn không đồng ý.</p>
+                    </div>
+                </template>
+            </div>
+
             <p x-show="room?.turnNotice && phase === 'waiting'" class="mt-4 flex items-start gap-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
                 <span aria-hidden="true">📶</span>
                 <span x-text="room?.turnNotice"></span>

@@ -21,6 +21,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $sender_token_hash
  * @property string|null $receiver_token_hash
  * @property CarbonImmutable|null $receiver_joined_at
+ * @property string|null $network_hash
+ * @property string|null $nearby_id
+ * @property string|null $nearby_name
+ * @property string|null $nearby_device
+ * @property CarbonImmutable|null $nearby_seen_at
+ * @property string|null $invite_from_room_id
+ * @property CarbonImmutable|null $invite_at
+ * @property string|null $invite_declined_by
+ * @property CarbonImmutable|null $invite_declined_at
  * @property CarbonImmutable $last_activity_at
  * @property CarbonImmutable|null $created_at
  */
@@ -32,6 +41,12 @@ class TransferRoom extends Model
     /** Phòng hết hạn sau ngần này phút không có hoạt động. */
     public const IDLE_MINUTES = 10;
 
+    /** Máy "ở gần" phải hỏi server trong ngần này giây mới còn hiện trong danh sách. */
+    public const NEARBY_FRESH_SECONDS = 15;
+
+    /** Lời mời kết nối hết hạn sau ngần này giây. */
+    public const INVITE_SECONDS = 60;
+
     public const UPDATED_AT = null;
 
     /**
@@ -42,6 +57,9 @@ class TransferRoom extends Model
         return [
             'receiver_joined_at' => 'immutable_datetime',
             'last_activity_at' => 'immutable_datetime',
+            'nearby_seen_at' => 'immutable_datetime',
+            'invite_at' => 'immutable_datetime',
+            'invite_declined_at' => 'immutable_datetime',
             'created_at' => 'immutable_datetime',
         ];
     }
@@ -86,6 +104,19 @@ class TransferRoom extends Model
     public static function hashToken(string $token): string
     {
         return hash('sha256', $token);
+    }
+
+    /**
+     * Phòng đang chờ (chưa có máy vào) trên cùng mạng, vừa hỏi server gần đây.
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeNearby(Builder $query, string $networkHash): Builder
+    {
+        return $query->where('network_hash', $networkHash)
+            ->whereNull('receiver_token_hash')
+            ->where('nearby_seen_at', '>=', now()->subSeconds(self::NEARBY_FRESH_SECONDS));
     }
 
     /**

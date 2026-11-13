@@ -89,6 +89,11 @@ export function fileTransfer(config) {
         safetyOpen: false,
         shared: [],
         sharedText: false,
+        nearby: [],
+        nearbyInvite: null,
+        nearbyInviting: null,
+        nearbyNote: '',
+        onCellular: (navigator.connection?.type ?? '') === 'cellular',
         shareNotice: '',
         files: [],
         offers: [],
@@ -201,6 +206,7 @@ export function fileTransfer(config) {
                     },
                     onPeer: (peer) => { this.peer = peer; },
                     onKind: (kind) => { this.kind = kind; },
+                    onNearby: (nearby) => this.updateNearby(nearby),
                     onSafety: (code) => { this.safety = code; },
                     onText: (text) => this.texts.unshift({ id: randomId(), from: 'peer', text, link: isHttpLink(text), copied: false }),
                     onOffer: (offer) => this.addOffer(offer),
@@ -208,10 +214,57 @@ export function fileTransfer(config) {
                     onFile: (fid, patch) => this.patchFile(fid, patch),
                 },
             });
+            session.setNearby(! this.onCellular);
             session.start();
         },
 
+        // ----- Máy cùng wifi -----
+
+        updateNearby({ devices, invite, declinedBy }) {
+            this.nearby = devices ?? [];
+            // Lời mời đang chờ tự hết khi máy mời không còn trong danh sách.
+            this.nearbyInvite = invite && ! this.joining ? invite : null;
+            if (this.nearbyInviting && ! this.nearby.some((device) => device.id === this.nearbyInviting.id)) {
+                this.nearbyInviting = null;
+            }
+            if (declinedBy) {
+                this.nearbyInviting = null;
+                this.nearbyNote = `${declinedBy} đã từ chối kết nối.`;
+            }
+        },
+
+        async invite(device) {
+            this.nearbyNote = '';
+            this.nearbyInviting = device;
+            try {
+                await session.inviteNearby(device.id);
+            } catch (error) {
+                this.nearbyInviting = null;
+                this.nearbyNote = error.message;
+            }
+        },
+
+        acceptInvite() {
+            const invite = this.nearbyInvite;
+            this.nearbyInvite = null;
+            this.joinInput = invite.code;
+            this.join();
+        },
+
+        declineInvite() {
+            this.nearbyInvite = null;
+            session?.declineNearby();
+        },
+
+        deviceIcon(device) {
+            return /iPhone|Android|điện thoại/i.test(device ?? '') ? '📱' : (/bảng|iPad/i.test(device ?? '') ? '📲' : '💻');
+        },
+
         reset() {
+            this.nearby = [];
+            this.nearbyInvite = null;
+            this.nearbyInviting = null;
+            this.nearbyNote = '';
             this.room = null;
             this.peer = null;
             this.kind = null;

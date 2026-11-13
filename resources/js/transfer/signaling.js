@@ -68,7 +68,7 @@ export class Signaling {
      * Bắt đầu hỏi tin mới. onSignal(payload) cho từng tin, onPeer() khi máy kia vừa vào phòng,
      * onError(SignalingError) khi phòng hết hạn / bị xóa hoặc mất mạng quá lâu.
      */
-    start({ onSignal, onPeer = () => {}, onError = () => {} }) {
+    start({ onSignal, onPeer = () => {}, onError = () => {}, onNearby = () => {} }) {
         this.running = true;
         this.peerSeen = false;
 
@@ -79,8 +79,14 @@ export class Signaling {
             this.inFlight = true;
 
             try {
-                const data = await request(this.fetcher, `${this.url}/tin?after=${this.after}`, { token: this.token });
+                // Đang chờ và cho phép tìm máy gần: gửi kèm tên ngẫu nhiên để máy cùng mạng thấy.
+                const nearby = this.nearby ? `&nearby=1&name=${encodeURIComponent(this.nearby.name)}&device=${encodeURIComponent(this.nearby.device)}` : '';
+                const data = await request(this.fetcher, `${this.url}/tin?after=${this.after}${nearby}`, { token: this.token });
                 this.failures = 0;
+
+                if (data.nearby && this.nearby) {
+                    onNearby(data.nearby);
+                }
 
                 if (data.peerJoined && ! this.peerSeen) {
                     this.peerSeen = true;

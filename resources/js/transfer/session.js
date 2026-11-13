@@ -89,7 +89,9 @@ export class TransferSession {
 
         this.signaling.start({
             onSignal: (payload) => this.handleSignal(payload),
+            onNearby: (nearby) => this.on.onNearby?.(nearby),
             onPeer: () => {
+                this.signaling.nearby = null;
                 if (this.room.role === 'sender') {
                     this.on.onState('connecting');
                     this.makeOffer();
@@ -108,6 +110,22 @@ export class TransferSession {
         if (this.room.role === 'receiver') {
             this.armConnectTimer();
         }
+    }
+
+    /** Bật / tắt "tìm máy cùng wifi" khi đang chờ (chỉ máy tạo phòng, chưa ai vào). */
+    setNearby(enabled) {
+        this.signaling.nearby = enabled && this.room.role === 'sender' && ! this.room.peerJoined && ! this.everConnected
+            ? { name: this.me.name, device: this.me.device }
+            : null;
+    }
+
+    /** Mời một máy cùng mạng; máy kia phải đồng ý. */
+    inviteNearby(id) {
+        return request((...args) => fetch(...args), `${this.apiBase}/${this.room.code}/moi`, { method: 'POST', token: this.room.token, body: { to: id } });
+    }
+
+    declineNearby() {
+        return request((...args) => fetch(...args), `${this.apiBase}/${this.room.code}/tu-choi`, { method: 'POST', token: this.room.token }).catch(() => null);
     }
 
     createPeer() {
