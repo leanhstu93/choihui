@@ -44,6 +44,22 @@
         <section x-show="['creating', 'waiting', 'join-failed'].includes(phase)" class="mt-5 rounded-3xl bg-white p-5 shadow-sm sm:p-6">
             <div class="text-sm text-gray-500">Máy này: <b class="text-gray-800" x-text="me.name"></b> · <span x-text="me.device"></span></div>
 
+            {{-- Lời mời từ máy cùng wifi --}}
+            <div x-show="nearbyInvite" class="mt-4 rounded-2xl bg-emerald-50 p-4 ring-2 ring-emerald-500" style="display: none" role="alertdialog" aria-live="assertive">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl" aria-hidden="true" x-text="deviceIcon(nearbyInvite?.device)"></span>
+                    <div class="min-w-0">
+                        <div class="font-semibold"><span x-text="nearbyInvite?.name"></span> muốn kết nối với máy này</div>
+                        <div class="text-sm text-gray-600" x-text="`${nearbyInvite?.device ?? ''} · cùng mạng wifi`"></div>
+                    </div>
+                </div>
+                <p class="mt-2 text-xs text-gray-600">Chỉ đồng ý nếu bạn nhận ra máy này. Kết nối xong vẫn phải bấm Nhận cho từng lượt file.</p>
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                    <button type="button" @click="declineInvite()" class="rounded-xl border border-gray-300 bg-white py-2.5 font-semibold text-gray-700 hover:bg-gray-50">Từ chối</button>
+                    <button type="button" @click="acceptInvite()" class="rounded-xl bg-emerald-700 py-2.5 font-semibold text-white hover:bg-emerald-800">Đồng ý</button>
+                </div>
+            </div>
+
             <template x-if="room && phase === 'waiting'">
                 <div class="mt-4 flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
                     <div class="w-44 shrink-0 rounded-2xl bg-white p-2 ring-1 ring-gray-200 sm:w-48 [&_svg]:h-auto [&_svg]:w-full" x-html="room.qrSvg" aria-label="Mã QR để vào phòng"></div>
@@ -60,22 +76,6 @@
             </template>
 
             <div x-show="phase === 'creating'" class="mt-4 text-sm text-gray-500">Đang tạo mã…</div>
-
-            {{-- Lời mời từ máy cùng wifi --}}
-            <div x-show="nearbyInvite" class="mt-5 rounded-2xl bg-emerald-50 p-4 ring-2 ring-emerald-500" style="display: none" role="alertdialog" aria-live="assertive">
-                <div class="flex items-center gap-3">
-                    <span class="text-3xl" aria-hidden="true" x-text="deviceIcon(nearbyInvite?.device)"></span>
-                    <div class="min-w-0">
-                        <div class="font-semibold"><span x-text="nearbyInvite?.name"></span> muốn kết nối với máy này</div>
-                        <div class="text-sm text-gray-600" x-text="`${nearbyInvite?.device ?? ''} · cùng mạng wifi`"></div>
-                    </div>
-                </div>
-                <p class="mt-2 text-xs text-gray-600">Chỉ đồng ý nếu bạn nhận ra máy này. Kết nối xong vẫn phải bấm Nhận cho từng lượt file.</p>
-                <div class="mt-3 grid grid-cols-2 gap-2">
-                    <button type="button" @click="declineInvite()" class="rounded-xl border border-gray-300 bg-white py-2.5 font-semibold text-gray-700 hover:bg-gray-50">Từ chối</button>
-                    <button type="button" @click="acceptInvite()" class="rounded-xl bg-emerald-700 py-2.5 font-semibold text-white hover:bg-emerald-800">Đồng ý</button>
-                </div>
-            </div>
 
             {{-- Máy cùng wifi: bấm là mời, khỏi quét mã --}}
             <div x-show="phase === 'waiting'" class="mt-5 border-t border-gray-100 pt-5">
@@ -148,7 +148,7 @@
                     <div class="font-semibold" x-text="{ connected: `Đã kết nối với ${peer?.name ?? 'máy kia'}`, unstable: 'Kết nối chập chờn, đang thử giữ…', reconnecting: 'Mất kết nối, đang nối lại…' }[phase]"></div>
                     <div class="text-xs text-gray-500"><span x-text="peer?.device ?? ''"></span> · <span x-text="kindLabel"></span></div>
                 </div>
-                <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="kind === 'relay' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'" x-text="kind === 'relay' ? 'Qua trung chuyển' : (kind ? 'Trực tiếp' : '…')"></span>
+                <span x-show="phase !== 'reconnecting'" class="rounded-full px-3 py-1 text-xs font-semibold" :class="kind === 'relay' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'" x-text="kind === 'relay' ? 'Qua trung chuyển' : (kind ? 'Trực tiếp' : '…')"></span>
                 <button type="button" @click="disconnect()" class="rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50">Ngắt</button>
             </div>
             <p x-show="phase === 'reconnecting'" class="flex items-start gap-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
@@ -286,7 +286,11 @@
             @foreach ([
                 ['File có đi qua server không?', 'Không. Server chỉ giúp hai máy tìm thấy nhau trong vài giây đầu. File đi thẳng giữa hai máy và được mã hóa. Nếu mạng chặn kết nối thẳng, dữ liệu đi vòng qua máy chủ trung chuyển, vẫn được mã hóa, và trang sẽ báo cho bạn biết.'],
                 ['Gửi được file lớn tới đâu?', 'Giữa hai máy tính dùng Chrome hoặc Edge: không giới hạn, file nhiều GB vẫn được. Firefox và điện thoại Android: file tải thẳng vào thư mục Tải về. iPhone: giới hạn theo bộ nhớ trống của máy, trang sẽ báo trước khi nhận.'],
-                ['Mã phòng dùng được bao lâu?', 'Mỗi mã chỉ cho đúng 2 thiết bị, tự hết hạn sau 10 phút không dùng. Khi hai máy đã kết nối, mã bị xóa ngay.'],
+                ['Mã phòng dùng được bao lâu?', 'Mỗi mã chỉ cho đúng 2 thiết bị, máy thứ ba không vào được. Mã tự hết hạn sau 10 phút không dùng. Trong lúc hai máy đang kết nối, mã được giữ để tự nối lại khi rớt mạng, và bị xóa khi một bên bấm Ngắt hoặc đóng trang.'],
+                ['Rớt mạng giữa chừng thì sao?', 'Đừng đóng trang. Hai máy tự nối lại (chờ tối đa 2 phút) và file đang dở được gửi tiếp từ chỗ dừng, không phải gửi lại từ đầu. Nhận xong, trang so mã kiểm tra SHA-256 và báo "giống hệt bản gốc".'],
+                ['Mã an toàn (4 hình) là gì?', 'Hai máy cùng hiện 4 hình sinh từ khóa mã hóa của kết nối. Hình giống nhau trên cả hai màn hình nghĩa là không ai chen vào giữa, kể cả máy chủ. Khác nhau thì bấm Ngắt và tạo mã mới.'],
+                ['Không cần quét mã được không?', 'Được, nếu hai máy dùng chung một wifi: mở trang trên cả hai máy, máy kia hiện trong mục "Máy cùng wifi", bấm Kết nối rồi bên kia bấm Đồng ý. Chỉ máy cùng mạng mới thấy tên ngẫu nhiên của máy bạn.'],
+                ['Gửi thẳng từ thư viện ảnh trên điện thoại?', 'Trên Android: cài Sổ tay lên màn hình chính (menu trình duyệt → Thêm vào màn hình chính), rồi trong thư viện ảnh chọn ảnh → Chia sẻ → Sổ tay. Ảnh chờ sẵn, kết nối xong là gửi. iPhone chưa hỗ trợ cách này, hãy mở trang rồi bấm Chọn file.'],
             ] as [$question, $answer])
                 <details class="rounded-2xl bg-white p-4 shadow-sm">
                     <summary class="cursor-pointer font-semibold text-gray-900">{{ $question }}</summary>

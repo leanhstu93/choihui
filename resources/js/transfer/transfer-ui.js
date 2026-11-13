@@ -486,6 +486,11 @@ export function fileTransfer(config) {
             }
 
             session.accept(offer.id, openSink);
+            if (offer.folder && this.storage !== 'fs') {
+                for (const file of offer.files) {
+                    this.patchFile(file.fid, { note: `trong ${offer.folder}.zip` });
+                }
+            }
             this.requestWakeLock();
         },
 
