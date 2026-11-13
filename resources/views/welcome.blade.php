@@ -1,5 +1,6 @@
 @php
     /** @var array<string, string> $lunarLookup */
+    /** @var array{year: int, months: list<list<array{int, int, int, int}>>, yearNames: array<int, string>, holidays: list<array<string, mixed>>} $calendar */
     $brand = config('app.name');
     $title = $brand.' · Sổ tay gia đình: ngày giỗ âm lịch, sức khỏe, sửa chữa, vàng, tài sản';
     $description = 'Ứng dụng miễn phí ghi chép việc nhà: ngày giỗ theo âm lịch, sức khỏe cả nhà, sửa chữa đồ dùng, vàng và tổng tài sản. Tự tính, tự nhắc qua email.';
@@ -245,7 +246,105 @@
                 </div>
             </section>
 
-            {{-- 4. Thử tra: ngày âm năm nay rơi vào ngày dương nào --}}
+            {{-- 4. Lịch âm dương và ngày lễ trong năm --}}
+            <section id="lich" class="scroll-mt-16 bg-rose-50/60 py-16" x-data="landingCalendar(@js($calendar), @js(today()->toDateString()), @js(url('lich')))">
+                <div class="mx-auto max-w-5xl px-4">
+                    <h2 class="text-center text-3xl font-bold">Lịch âm dương & ngày lễ</h2>
+                    <p class="mt-2 text-center text-gray-600">Xem ngày âm, mùng 1, ngày rằm và các ngày lễ trong năm.</p>
+
+                    <div class="mt-8 grid gap-6 lg:grid-cols-[1fr_22rem]">
+                        {{-- Lịch tháng --}}
+                        <div class="rounded-3xl bg-white p-4 shadow-sm sm:p-6">
+                            <div class="flex items-center justify-between gap-2">
+                                <button type="button" @click="shift(-1)" :disabled="loading" class="flex h-10 w-10 items-center justify-center rounded-full text-xl text-gray-600 hover:bg-gray-100 disabled:opacity-40" aria-label="Tháng trước">‹</button>
+                                <div class="text-center">
+                                    <div class="text-lg font-bold" x-text="`Tháng ${month + 1}/${year}`"></div>
+                                    <div class="text-xs text-gray-500" x-text="lunarRange"></div>
+                                </div>
+                                <button type="button" @click="shift(1)" :disabled="loading" class="flex h-10 w-10 items-center justify-center rounded-full text-xl text-gray-600 hover:bg-gray-100 disabled:opacity-40" aria-label="Tháng sau">›</button>
+                            </div>
+
+                            <div class="mt-4 grid grid-cols-7 text-center text-xs font-semibold text-gray-500">
+                                @foreach (['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'] as $weekdayName)
+                                    <div class="py-1 {{ $weekdayName === 'CN' ? 'text-rose-600' : '' }}">{{ $weekdayName }}</div>
+                                @endforeach
+                            </div>
+                            <div class="grid grid-cols-7 gap-1" :class="loading && 'opacity-50'">
+                                <template x-for="cell in cells" :key="cell.key">
+                                    <div>
+                                        <button type="button" x-show="cell.day" @click="select(cell.iso)" :aria-label="cell.label"
+                                            :class="[
+                                                cell.iso === selected ? 'ring-2 ring-emerald-600' : (cell.iso === today ? 'ring-2 ring-amber-400' : ''),
+                                                cell.dayOff ? 'bg-rose-100 hover:bg-rose-200' : (cell.holiday ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-gray-100'),
+                                            ]"
+                                            class="relative flex aspect-square w-full flex-col items-center justify-center rounded-xl transition sm:aspect-[5/4]">
+                                            <span class="text-base font-semibold sm:text-lg" :class="cell.dayOff || cell.sunday ? 'text-rose-600' : 'text-gray-900'" x-text="cell.day"></span>
+                                            <span class="text-[10px] leading-none sm:text-xs" :class="cell.lunarDay === 1 || cell.lunarDay === 15 ? 'font-bold text-rose-600' : 'text-gray-400'" x-text="cell.lunarText"></span>
+                                            <span x-show="cell.holiday" class="absolute right-1 top-1 h-1.5 w-1.5 rounded-full" :class="cell.dayOff ? 'bg-rose-500' : 'bg-amber-500'"></span>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+
+                            {{-- Ngày đang chọn --}}
+                            <div class="mt-4 rounded-2xl bg-gray-50 p-4" aria-live="polite">
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="min-w-0">
+                                        <div class="font-semibold" x-text="detail.solar"></div>
+                                        <div class="text-sm text-gray-600" x-text="detail.lunar"></div>
+                                    </div>
+                                    <button type="button" x-show="selected !== today" @click="goToday()" class="shrink-0 rounded-full border border-emerald-700 px-3 py-1 text-sm font-semibold text-emerald-700 hover:bg-emerald-50">Hôm nay</button>
+                                </div>
+                                <template x-for="holiday in detail.holidays" :key="holiday.name">
+                                    <div class="mt-2 flex items-center gap-2 text-sm font-semibold" :class="holiday.dayOff ? 'text-rose-700' : 'text-amber-800'">
+                                        <span aria-hidden="true" x-text="holiday.icon"></span>
+                                        <span x-text="holiday.name"></span>
+                                        <span x-show="holiday.dayOff" class="rounded-full bg-rose-100 px-2 py-0.5 text-xs">Nghỉ lễ</span>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div class="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                                <span><span class="mr-1 inline-block h-2 w-2 rounded-full bg-rose-500"></span>Nghỉ lễ</span>
+                                <span><span class="mr-1 inline-block h-2 w-2 rounded-full bg-amber-500"></span>Ngày lễ khác</span>
+                                <span>Số nhỏ là ngày âm, <b class="text-rose-600">đỏ</b> là mùng 1 và rằm</span>
+                            </div>
+                        </div>
+
+                        {{-- Ngày lễ trong năm --}}
+                        <div class="rounded-3xl bg-white p-4 shadow-sm sm:p-6">
+                            <div class="flex items-center justify-between gap-2">
+                                <h3 class="whitespace-nowrap font-bold">Ngày lễ</h3>
+                                <div class="flex gap-1 rounded-full bg-gray-100 p-1 text-xs font-semibold">
+                                    <template x-for="[key, label] in [['next', 'Sắp tới'], ['month', `Tháng ${month + 1}`], ['year', `Năm ${year}`]]" :key="key">
+                                        <button type="button" @click="listMode = key" :class="listMode === key ? 'bg-white shadow' : 'text-gray-500'" class="whitespace-nowrap rounded-full px-2.5 py-1" x-text="label"></button>
+                                    </template>
+                                </div>
+                            </div>
+                            <ul class="mt-3 max-h-[28rem] divide-y divide-gray-100 overflow-y-auto">
+                                <template x-for="holiday in holidayList" :key="holiday.date + holiday.name">
+                                    <li>
+                                        <button type="button" @click="select(holiday.date)" class="flex w-full items-center gap-3 py-2.5 text-left hover:bg-gray-50" :class="holiday.past && 'opacity-50'">
+                                            <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg" :class="holiday.dayOff ? 'bg-rose-100' : 'bg-amber-50'" aria-hidden="true" x-text="holiday.icon"></span>
+                                            <span class="min-w-0 flex-1">
+                                                <span class="block truncate text-sm font-semibold" x-text="holiday.name"></span>
+                                                <span class="block text-xs text-gray-500" x-text="holiday.when"></span>
+                                            </span>
+                                            <span x-show="holiday.badge" class="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold" :class="holiday.daysLeft === 0 ? 'bg-amber-400 text-amber-950' : 'bg-emerald-100 text-emerald-800'" x-text="holiday.badge"></span>
+                                        </button>
+                                    </li>
+                                </template>
+                                <li x-show="holidayList.length === 0" class="py-6 text-center text-sm text-gray-500">Không có ngày lễ nào.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <a href="{{ route('register') }}" class="mx-auto mt-8 block max-w-md rounded-full bg-emerald-700 px-6 py-3 text-center font-semibold text-white hover:bg-emerald-800">Thêm ngày giỗ, sinh nhật nhà bạn, app nhắc trước →</a>
+                    <p class="mt-4 text-center text-xs text-gray-500">Âm lịch theo giờ Việt Nam. Lịch nghỉ Tết cụ thể do Chính phủ công bố hằng năm.</p>
+                </div>
+            </section>
+
+            {{-- 5. Thử tra: ngày âm năm nay rơi vào ngày dương nào --}}
             <section id="tra-ngay-am" class="bg-gray-900 py-16 text-white" x-data="landingLunar(@js($lunarLookup), @js(today()->toDateString()))">
                 <div class="mx-auto max-w-3xl px-4">
                     <h2 class="text-center text-3xl font-bold">Ngày giỗ năm nay rơi vào ngày nào?</h2>
@@ -291,7 +390,7 @@
                 </div>
             </section>
 
-            {{-- 5. Ba bước --}}
+            {{-- 6. Ba bước --}}
             <section class="mx-auto max-w-5xl px-4 py-16">
                 <h2 class="text-center text-3xl font-bold">3 bước là xong</h2>
                 <ol class="mt-10 grid gap-4 md:grid-cols-3">
@@ -343,6 +442,162 @@
 
         <script>
             document.addEventListener('alpine:init', () => {
+                // Lịch âm dương: dữ liệu năm tính sẵn bằng App\Queries\YearCalendar, năm khác tải từ /lich/{năm}.json.
+                window.Alpine.data('landingCalendar', (initial, today, endpoint) => ({
+                    years: { [initial.year]: initial },
+                    today,
+                    selected: today,
+                    year: Number(today.slice(0, 4)),
+                    month: Number(today.slice(5, 7)) - 1,
+                    loading: false,
+                    listMode: 'next',
+                    init() {
+                        // Gần cuối năm thì "Sắp tới" cần cả ngày lễ năm sau.
+                        this.fetchYear(this.year + 1);
+                    },
+                    weekdays: ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'],
+                    get data() {
+                        return this.years[this.year];
+                    },
+                    get cells() {
+                        const data = this.data;
+                        const first = new Date(Date.UTC(this.year, this.month, 1)).getUTCDay();
+                        const blanks = (first + 6) % 7;
+                        const cells = Array.from({ length: blanks }, (_, i) => ({ key: `b${i}` }));
+
+                        if (! data) {
+                            return cells;
+                        }
+
+                        data.months[this.month].forEach(([lunarDay, lunarMonth, leap], i) => {
+                            const iso = this.iso(this.year, this.month, i + 1);
+                            const holidays = this.holidaysOn(iso);
+                            const lunarText = lunarDay === 1 ? `${lunarDay}/${lunarMonth}${leap ? 'N' : ''}` : String(lunarDay);
+                            cells.push({
+                                key: iso, iso, day: i + 1, lunarDay, lunarText,
+                                sunday: (blanks + i) % 7 === 6,
+                                holiday: holidays.length > 0,
+                                dayOff: holidays.some((holiday) => holiday.dayOff),
+                                label: `Ngày ${i + 1}, âm lịch ${lunarDay}/${lunarMonth}${holidays.map((holiday) => ', ' + holiday.name).join('')}`,
+                            });
+                        });
+
+                        return cells;
+                    },
+                    get lunarRange() {
+                        const days = this.data?.months[this.month];
+
+                        if (! days) {
+                            return 'Đang tải…';
+                        }
+
+                        const first = days[0];
+                        const last = days[days.length - 1];
+                        const months = first[1] === last[1] ? `Tháng ${first[1]}` : `Tháng ${first[1]}${first[2] ? ' nhuận' : ''} – ${last[1]}${last[2] ? ' nhuận' : ''}`;
+                        const names = [...new Set([first[3], last[3]])].map((lunarYear) => this.data.yearNames[lunarYear]).join(' – ');
+
+                        return `${months} âm lịch · năm ${names}`;
+                    },
+                    get detail() {
+                        const [year, month, day] = this.selected.split('-').map(Number);
+                        const data = this.years[year];
+                        const date = new Date(Date.UTC(year, month - 1, day));
+                        const solar = `${this.weekdays[date.getUTCDay()]}, ${this.pad(day)}/${this.pad(month)}/${year}`;
+
+                        if (! data) {
+                            return { solar, lunar: '', holidays: [] };
+                        }
+
+                        const [lunarDay, lunarMonth, leap, lunarYear] = data.months[month - 1][day - 1];
+                        const special = lunarDay === 1 ? ' · Mùng 1' : (lunarDay === 15 ? ' · Ngày rằm' : '');
+
+                        return {
+                            solar,
+                            lunar: `Âm lịch: ${lunarDay}/${lunarMonth}${leap ? ' nhuận' : ''} năm ${data.yearNames[lunarYear]}${special}`,
+                            holidays: this.holidaysOn(this.selected),
+                        };
+                    },
+                    get holidayList() {
+                        const prefix = `${this.year}-${this.pad(this.month + 1)}`;
+                        let nextFound = false;
+                        let holidays;
+
+                        if (this.listMode === 'next') {
+                            holidays = Object.keys(this.years).sort().flatMap((year) => this.years[year].holidays)
+                                .filter((holiday) => holiday.date >= this.today).slice(0, 8);
+                        } else {
+                            holidays = (this.data?.holidays ?? []).filter((holiday) => this.listMode === 'year' || holiday.date.startsWith(prefix));
+                        }
+
+                        return holidays
+                            .map((holiday) => {
+                                const [, month, day] = holiday.date.split('-').map(Number);
+                                const daysLeft = Math.round((this.parse(holiday.date) - this.parse(this.today)) / 86400000);
+                                const weekday = this.weekdays[this.parse(holiday.date).getUTCDay()];
+                                let badge = '';
+
+                                if (daysLeft >= 0 && ! nextFound) {
+                                    nextFound = true;
+                                    badge = daysLeft === 0 ? 'Hôm nay' : `Còn ${daysLeft} ngày`;
+                                }
+
+                                const year = holiday.date.slice(0, 4);
+
+                                return { ...holiday, daysLeft, badge, past: daysLeft < 0, when: `${weekday}, ${this.pad(day)}/${this.pad(month)}/${year}${holiday.lunar ? ' · ' + holiday.lunar : ''}` };
+                            });
+                    },
+                    holidaysOn(iso) {
+                        return (this.years[Number(iso.slice(0, 4))]?.holidays ?? []).filter((holiday) => holiday.date === iso);
+                    },
+                    async shift(step) {
+                        const next = new Date(Date.UTC(this.year, this.month + step, 1));
+                        await this.show(next.getUTCFullYear(), next.getUTCMonth());
+                    },
+                    async show(year, month) {
+                        if (! this.years[year]) {
+                            this.loading = true;
+                            await this.fetchYear(year);
+                            this.loading = false;
+                        }
+                        if (! this.years[year]) {
+                            return;
+                        }
+                        this.year = year;
+                        this.month = month;
+                    },
+                    async fetchYear(year) {
+                        if (this.years[year]) {
+                            return;
+                        }
+                        try {
+                            const response = await fetch(`${endpoint}/${year}.json`);
+                            if (response.ok) {
+                                this.years[year] = await response.json();
+                            }
+                        } catch {
+                            // Mất mạng: giữ nguyên tháng đang xem.
+                        }
+                    },
+                    async select(iso) {
+                        await this.show(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1);
+                        this.selected = iso;
+                    },
+                    goToday() {
+                        this.select(this.today);
+                    },
+                    iso(year, month, day) {
+                        return `${year}-${this.pad(month + 1)}-${this.pad(day)}`;
+                    },
+                    pad(value) {
+                        return String(value).padStart(2, '0');
+                    },
+                    parse(isoDate) {
+                        const [year, month, day] = isoDate.split('-').map(Number);
+
+                        return new Date(Date.UTC(year, month - 1, day));
+                    },
+                }));
+
                 // Tra ngày âm: bảng "d/m" → Y-m-d tính sẵn trên server bằng App\Queries\LunarDateLookup.
                 window.Alpine.data('landingLunar', (table, today) => ({
                     table,

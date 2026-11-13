@@ -44,13 +44,21 @@ use App\Livewire\Rounds\RoundShow;
 use App\Livewire\Settings\SettingsPage;
 use App\Livewire\Settings\UnlockPage;
 use App\Queries\LunarDateLookup;
+use App\Queries\YearCalendar;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Route;
 
 // Trang giới thiệu cho khách; người đã đăng nhập vào thẳng sổ của mình.
-Route::get('/', fn (LunarDateLookup $lunar) => auth()->check()
+Route::get('/', fn (LunarDateLookup $lunar, YearCalendar $calendar) => auth()->check()
     ? redirect()->route('net-worth')
-    : view('welcome', ['lunarLookup' => $lunar->from(CarbonImmutable::today())]))->name('home');
+    : view('welcome', ['lunarLookup' => $lunar->from(CarbonImmutable::today()), 'calendar' => $calendar->forYear(CarbonImmutable::today()->year)]))->name('home');
+
+// Lịch âm dương một năm cho phần lịch trên trang giới thiệu (tải khi chuyển sang năm khác).
+Route::get('lich/{year}.json', function (int $year, YearCalendar $calendar) {
+    abort_unless($year >= YearCalendar::MIN_YEAR && $year <= YearCalendar::MAX_YEAR, 404);
+
+    return response()->json($calendar->forYear($year))->header('Cache-Control', 'public, max-age=86400');
+})->whereNumber('year')->name('calendar.year');
 
 // SEO: sinh theo APP_URL để đổi tên miền không phải sửa file.
 Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /tong-tai-san\nDisallow: /vang\nDisallow: /sua-chua\nDisallow: /gia-dinh\nDisallow: /quan-tri\nSitemap: ".url('sitemap.xml')."\n")
