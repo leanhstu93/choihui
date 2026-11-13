@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Livewire\NetWorth;
 
 use App\Actions\NetWorth\RecordNetWorthSnapshot;
+use App\Domain\TetCountdown;
 use App\Models\NetWorthSnapshot;
 use App\Models\User;
 use App\Queries\NetWorthReport;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
 use Livewire\Attributes\Layout;
@@ -33,6 +35,7 @@ class NetWorthPage extends Component
     {
         return view('livewire.net-worth.net-worth-page', $netWorthReport->forUser($this->user()) + [
             'isHost' => $this->user()->isHost(),
+            'tet' => TetCountdown::from(CarbonImmutable::today()->toDateTimeImmutable()),
             'snapshots' => NetWorthSnapshot::query()->orderByDesc('month')->limit(self::CHART_MONTHS)->get()->reverse()->values(),
         ]);
     }

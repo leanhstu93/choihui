@@ -196,3 +196,18 @@ test('the history survives a backup and an old file leaves it alone', function (
     app(RestoreBackup::class)->handle($bob, $backup);
     expect(NetWorthSnapshot::sole()->only(['month', 'assets', 'debts']))->toBe(['month' => '2026-03', 'assets' => 7, 'debts' => 2]);
 });
+
+test('the home page counts down to Tết', function () {
+    $this->actingAs(User::factory()->create());
+
+    $this->travelTo('2026-11-13 08:00:00');
+    Livewire::test(NetWorthPage::class)
+        ->assertSee('Còn 85 ngày nữa là Tết')
+        ->assertSee('Tết Đinh Mùi')
+        ->assertSee('Mùng 1: Thứ Bảy, 06/02/2027');
+
+    $this->travelTo('2027-02-06 08:00:00');
+    Livewire::test(NetWorthPage::class)
+        ->assertSee('Chúc mừng năm mới!')
+        ->assertSee('Hôm nay mùng 1 Tết Đinh Mùi');
+});

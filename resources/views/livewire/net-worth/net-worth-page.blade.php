@@ -1,6 +1,24 @@
 <div class="space-y-4">
     <x-install-app />
 
+    {{-- Đếm ngược tới Tết Nguyên đán --}}
+    <section class="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-red-600 to-rose-700 p-4 text-white shadow-sm">
+        <div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white/15 text-3xl" aria-hidden="true">{{ $tet->isTet() ? '🧧' : $tet->icon() }}</div>
+        <div class="min-w-0 flex-1">
+            @if ($tet->isTet())
+                <div class="text-sm text-rose-100">{{ $tet->tetDay === 1 ? 'Chúc mừng năm mới!' : 'Năm mới an khang' }}</div>
+                <div class="text-lg font-semibold">Hôm nay mùng {{ $tet->tetDay }} Tết {{ $tet->name() }}</div>
+            @elseif ($tet->daysLeft === 1)
+                <div class="text-sm text-rose-100">Đêm nay giao thừa</div>
+                <div class="text-lg font-semibold">Ngày mai là Tết {{ $tet->name() }}</div>
+            @else
+                <div class="text-sm text-rose-100">Tết {{ $tet->name() }}</div>
+                <div class="text-lg font-semibold">Còn {{ $tet->daysLeft }} ngày nữa là Tết</div>
+                <div class="text-sm text-rose-100">Mùng 1: @weekday($tet->tet), @date($tet->tet)</div>
+            @endif
+        </div>
+    </section>
+
     <section class="rounded-xl bg-emerald-700 p-5 text-white shadow-sm">
         <p class="text-sm text-emerald-100">Tài sản ròng</p>
         <p class="mt-1 text-3xl font-semibold">@money($net)</p>
