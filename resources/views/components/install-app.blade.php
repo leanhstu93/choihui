@@ -1,7 +1,7 @@
 {{-- Thẻ "Cài app" trên trang chủ: chỉ hiện trên điện thoại, chưa cài, chưa bấm "Để sau" (14 ngày). --}}
 <div x-data="installApp" x-cloak wire:ignore>
     <section x-show="platform" class="flex items-center gap-3 rounded-xl border border-emerald-200 bg-white p-3 shadow-sm">
-        <img src="/icons/icon-192.png" alt="" class="h-11 w-11 shrink-0 rounded-xl">
+        <img src="/icons/icon-192.png?v=2" alt="" class="h-11 w-11 shrink-0 rounded-xl">
         <div class="min-w-0 flex-1 text-sm">
             <div class="font-semibold">Cài {{ config('app.name') }} lên màn hình chính</div>
             <div class="text-gray-500" x-text="platform === 'in-app' ? 'Mở bằng trình duyệt để cài' : 'Mở nhanh như app, không cần tải'"></div>

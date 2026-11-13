@@ -6,7 +6,7 @@
     <body class="font-sans text-gray-900 antialiased bg-gray-100">
         <div class="min-h-screen flex flex-col items-center px-4 pt-12 sm:justify-center sm:pt-0">
             <a href="/" wire:navigate class="flex flex-col items-center gap-2">
-                <img src="/icons/icon-192.png" alt="" class="h-16 w-16">
+                <img src="/icons/icon-192.png?v=2" alt="" class="h-16 w-16">
                 <span class="text-lg font-semibold text-emerald-800">{{ config('app.name') }}</span>
             </a>
 

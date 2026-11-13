@@ -42,18 +42,7 @@
     </head>
     <body class="bg-white font-sans text-gray-900 antialiased">
         {{-- Thanh trên --}}
-        <header class="sticky top-0 z-30 border-b border-emerald-900/10 bg-white/90 backdrop-blur">
-            <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-                <a href="{{ url('/') }}" class="flex items-center gap-2 font-semibold text-emerald-800">
-                    <img src="/icons/icon-192.png" alt="" class="h-8 w-8 rounded-lg"> {{ $brand }}
-                </a>
-                <div class="flex items-center gap-3 text-sm">
-                    <a href="{{ route('lunar.today') }}" class="hidden font-medium text-gray-600 hover:text-emerald-700 sm:inline">Lịch âm</a>
-                    <a href="{{ route('login') }}" class="font-medium text-gray-600 hover:text-emerald-700">Đăng nhập</a>
-                    <a href="{{ route('register') }}" class="rounded-full bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">Dùng miễn phí</a>
-                </div>
-            </div>
-        </header>
+        <x-public-header :brand="$brand" />
 
         <main>
             {{-- 1. Hook: một con số tài sản và việc sắp tới --}}

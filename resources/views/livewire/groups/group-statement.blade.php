@@ -28,7 +28,7 @@
                     <p class="whitespace-nowrap text-xs text-gray-500">Phiếu tổng kết · xuất ngày {{ $exportedAt->format('d/m/Y H:i') }}</p>
                 </div>
                 <div class="flex shrink-0 items-center gap-2 whitespace-nowrap text-sm font-semibold text-emerald-800">
-                    <img src="/icons/icon-192.png" alt="" class="h-7 w-7 rounded-md">
+                    <img src="/icons/icon-192.png?v=2" alt="" class="h-7 w-7 rounded-md">
                     {{ config('app.name') }}
                 </div>
             </header>

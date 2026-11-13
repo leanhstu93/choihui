@@ -7,14 +7,7 @@
         <link rel="canonical" href="{{ route('privacy') }}">
     </head>
     <body class="bg-white font-sans text-gray-900 antialiased">
-        <header class="border-b border-gray-100">
-            <div class="mx-auto flex max-w-2xl items-center justify-between px-4 py-3">
-                <a href="{{ url('/') }}" class="flex items-center gap-2 font-semibold text-emerald-800">
-                    <img src="/icons/icon-192.png" alt="" class="h-8 w-8 rounded-lg"> {{ config('app.name') }}
-                </a>
-                <a href="{{ route('register') }}" class="rounded-full bg-emerald-700 px-4 py-2 text-sm font-semibold text-white">Dùng miễn phí</a>
-            </div>
-        </header>
+        <x-public-header />
 
         <main class="mx-auto max-w-2xl space-y-6 px-4 py-10 leading-relaxed text-gray-700 [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-gray-900 [&_li]:ml-5 [&_li]:list-disc">
             <div>
