@@ -2,6 +2,7 @@ import { IncomingFile } from './chunker.js';
 import { ACK_EVERY, CHUNK_SIZE, MAX_TEXT, parseMessage, randomId } from './protocol.js';
 import { OutgoingFile } from './sender.js';
 import { request, Signaling } from './signaling.js';
+import { extractFingerprint, safetyCode } from './safety.js';
 import { connectionKind } from './stats.js';
 import { formatBytes } from './storage.js';
 
@@ -29,7 +30,7 @@ export function relayLimitMessage(total, relayed, maxRelayBytes) {
  * DataChannel mã hóa (DTLS) giữa hai máy. Không gửi byte file nào khi bên kia chưa bấm Nhận.
  *
  * Báo ra ngoài qua các hàm on*: onState(phase, detail), onPeer(info), onKind(kind), onText(text),
- * onOffer(offer), onOfferGone(id), onFile(fid, patch).
+ * onOffer(offer), onOfferGone(id), onFile(fid, patch), onSafety(code).
  */
 export class TransferSession {
     constructor({ room, apiBase, me, handlers }) {
@@ -212,10 +213,21 @@ export class TransferSession {
             this.sendControl({ t: 'hello', name: this.me.name, device: this.me.device });
             this.refreshKind();
             this.kindTimer = setInterval(() => this.refreshKind(), 5000);
+            this.showSafetyCode();
         };
 
         channel.onclose = () => this.lost();
         channel.onmessage = ({ data }) => (typeof data === 'string' ? this.handleControl(data) : this.handleChunk(data));
+    }
+
+    /** Mã xác minh từ khóa mã hóa của hai máy (xem safety.js). */
+    async showSafetyCode() {
+        const mine = extractFingerprint(this.pc?.localDescription?.sdp);
+        const theirs = extractFingerprint(this.pc?.remoteDescription?.sdp);
+
+        if (mine && theirs) {
+            this.on.onSafety?.(await safetyCode(mine, theirs).catch(() => null));
+        }
     }
 
     async refreshKind() {

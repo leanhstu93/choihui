@@ -68,6 +68,8 @@ export function fileTransfer(config) {
         me: { name: `${pick(ANIMALS)} ${pick(COLORS)}`, device: deviceLabel(navigator.userAgent) },
         peer: null,
         kind: null,
+        safety: null,
+        safetyOpen: false,
         files: [],
         offers: [],
         texts: [],
@@ -165,6 +167,7 @@ export function fileTransfer(config) {
                     },
                     onPeer: (peer) => { this.peer = peer; },
                     onKind: (kind) => { this.kind = kind; },
+                    onSafety: (code) => { this.safety = code; },
                     onText: (text) => this.texts.unshift({ id: randomId(), from: 'peer', text, link: isHttpLink(text), copied: false }),
                     onOffer: (offer) => this.addOffer(offer),
                     onOfferGone: (id) => { this.offers = this.offers.filter((offer) => offer.id !== id); },
@@ -178,6 +181,8 @@ export function fileTransfer(config) {
             this.room = null;
             this.peer = null;
             this.kind = null;
+            this.safety = null;
+            this.safetyOpen = false;
             this.offers = [];
             this.message = '';
             this.errorReason = '';
@@ -201,6 +206,10 @@ export function fileTransfer(config) {
                 this.copiedCode = true;
                 setTimeout(() => { this.copiedCode = false; }, 2000);
             }).catch(() => {});
+        },
+
+        get safetyWords() {
+            return (this.safety ?? []).map((item) => item.name).join(' · ');
         },
 
         get kindLabel() {

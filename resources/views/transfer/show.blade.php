@@ -85,6 +85,26 @@
                 <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="kind === 'relay' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'" x-text="kind === 'relay' ? 'Qua trung chuyển' : (kind ? 'Trực tiếp' : '…')"></span>
                 <button type="button" @click="disconnect()" class="rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50">Ngắt</button>
             </div>
+            {{-- Mã xác minh an toàn: hai màn hình giống nhau là không ai chen vào giữa --}}
+            <div x-show="safety" class="rounded-2xl bg-white p-4 shadow-sm">
+                <button type="button" @click="safetyOpen = ! safetyOpen" class="flex w-full items-center gap-3 text-left" :aria-expanded="safetyOpen">
+                    <span class="text-xl" aria-hidden="true">🛡️</span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-xs font-semibold uppercase tracking-wide text-gray-500">Mã an toàn</span>
+                        <span class="mt-0.5 flex gap-2 text-2xl" :aria-label="`Mã an toàn: ${safetyWords}`">
+                            <template x-for="(item, index) in safety ?? []" :key="index">
+                                <span x-text="item.emoji" :title="item.name"></span>
+                            </template>
+                        </span>
+                    </span>
+                    <span class="shrink-0 text-xs font-semibold text-emerald-700" x-text="safetyOpen ? 'Ẩn' : 'Là gì?'"></span>
+                </button>
+                <div x-show="safetyOpen" class="mt-3 border-t border-gray-100 pt-3 text-sm text-gray-600">
+                    <p>Nhìn màn hình máy kia (hoặc đọc qua điện thoại: <b x-text="safetyWords"></b>). <b>Giống nhau</b> là hai máy đang nói chuyện trực tiếp, không ai chen vào giữa.</p>
+                    <p class="mt-2 text-rose-700">Khác nhau thì bấm <b>Ngắt</b> và tạo mã mới.</p>
+                </div>
+            </div>
+
             <p x-show="kind === 'relay'" class="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Mạng đang chặn kết nối thẳng nên dữ liệu đi vòng qua máy chủ trung chuyển (vẫn được mã hóa, máy chủ không đọc được). Tốc độ có thể chậm hơn và mỗi lượt gửi tối đa <b x-text="formatBytes(room?.maxRelayBytes ?? 0)"></b>; dùng chung một wifi sẽ nhanh nhất và không giới hạn.</p>
 
             {{-- Lời mời nhận file --}}
