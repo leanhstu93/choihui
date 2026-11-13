@@ -1,3 +1,4 @@
+import { createHasher } from './hashing.js';
 import { CHUNK_SIZE, READ_BLOCK } from './protocol.js';
 
 /**
@@ -73,7 +74,8 @@ export class SendWindow {
 
 /**
  * Ghi các mảnh xuống sink lần lượt theo đúng thứ tự đến, báo số byte đã ghi xong sau mỗi
- * $ackEvery byte để bên gửi mở cửa sổ. Sai số byte so với khai báo thì báo lỗi.
+ * $ackEvery byte để bên gửi mở cửa sổ. Sai số byte so với khai báo thì báo lỗi. Tính SHA-256 theo
+ * đúng thứ tự ghi để so với mã bên gửi.
  */
 export class IncomingFile {
     constructor({ size, sink, ackEvery, onAck = () => {}, onProgress = () => {} }) {
@@ -85,7 +87,8 @@ export class IncomingFile {
         this.queued = 0;
         this.written = 0;
         this.lastAck = 0;
-        this.chain = Promise.resolve();
+        this.hasher = createHasher();
+        this.chain = this.hasher.then(() => {});
         this.failed = null;
     }
 
@@ -109,6 +112,8 @@ export class IncomingFile {
                 return;
             }
 
+            // Băm trước khi ghi: sink có thể chuyển buffer đi.
+            (await this.hasher).update(data);
             await this.sink.write(data);
             this.written += size;
             this.onProgress(this.written);
@@ -122,8 +127,11 @@ export class IncomingFile {
         });
     }
 
-    /** Chờ ghi hết rồi đóng sink; lỗi nếu thiếu byte. */
-    async finish() {
+    /**
+     * Chờ ghi hết rồi đóng sink; lỗi nếu thiếu byte. Trả về kết quả của sink kèm verified: true/false
+     * khi bên gửi có gửi mã SHA-256, null nếu không (máy gửi bản cũ).
+     */
+    async finish(expectedSha256 = null) {
         await this.chain;
 
         if (this.failed) {
@@ -133,7 +141,10 @@ export class IncomingFile {
             throw new Error(`Thiếu dữ liệu: nhận ${this.written}/${this.size} byte.`);
         }
 
-        return this.sink.close();
+        const sha256 = (await this.hasher).hex();
+        const result = await this.sink.close();
+
+        return { ...result, sha256, verified: typeof expectedSha256 === 'string' ? expectedSha256 === sha256 : null };
     }
 
     async abort() {

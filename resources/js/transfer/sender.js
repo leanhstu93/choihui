@@ -1,9 +1,11 @@
 import { readChunks, SendWindow } from './chunker.js';
+import { createHasher } from './hashing.js';
 import { BUFFER_HIGH, BUFFER_LOW, SEND_WINDOW } from './protocol.js';
 
 /**
  * Đẩy một file qua DataChannel: đọc dần, dừng khi bộ đệm của kênh đầy hoặc bên nhận chưa ghi kịp
- * (cửa sổ gửi). RAM bên gửi chỉ chứa vài MB dù file bao nhiêu GB.
+ * (cửa sổ gửi). RAM bên gửi chỉ chứa vài MB dù file bao nhiêu GB. Tính SHA-256 trong lúc đọc và
+ * gửi kèm tin end để bên nhận so.
  */
 export class OutgoingFile {
     constructor({ file, fid, channel, chunkSize, onProgress = () => {}, window = SEND_WINDOW }) {
@@ -35,6 +37,7 @@ export class OutgoingFile {
         const onClose = () => this.window.abort(new Error('channel-closed'));
         channel.bufferedAmountLowThreshold = BUFFER_LOW;
         channel.addEventListener('close', onClose);
+        const hasher = await createHasher();
         channel.send(JSON.stringify({ t: 'start', fid: this.fid, size: this.file.size }));
 
         try {
@@ -56,10 +59,11 @@ export class OutgoingFile {
                     throw new Error('channel-closed');
                 }
 
+                hasher.update(data);
                 channel.send(data);
                 this.window.add(data.byteLength);
             }
-            channel.send(JSON.stringify({ t: 'end', fid: this.fid }));
+            channel.send(JSON.stringify({ t: 'end', fid: this.fid, sha256: hasher.hex() }));
             await this.window.drained();
         } catch (error) {
             if (this.cancelled) {

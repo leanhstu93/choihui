@@ -37,6 +37,8 @@ class FakeChannel extends EventTarget {
     }
 }
 
+const sha256Hex = async (bytes) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes)), (b) => b.toString(16).padStart(2, '0')).join('');
+
 const randomFile = (size) => {
     const bytes = new Uint8Array(size);
     for (let i = 0; i < size; i += 65536) {
@@ -54,11 +56,15 @@ describe('sending a file end to end', () => {
         let outgoing = null;
         let maxInFlight = 0;
         const control = [];
+        let endMessage = null;
 
         const channel = new FakeChannel((data) => {
             if (typeof data === 'string') {
                 const message = parseMessage(data);
                 control.push(message.t);
+                if (message.t === 'end') {
+                    endMessage = message;
+                }
                 if (message.t === 'start') {
                     incoming = new IncomingFile({ size: message.size, sink, ackEvery: 64 * 1024, onAck: (written) => setTimeout(() => outgoing.ack(written), 0) });
                 }
@@ -76,11 +82,45 @@ describe('sending a file end to end', () => {
 
         expect(await outgoing.run()).toBe(true);
         await new Promise((resolve) => setTimeout(resolve, 10));
-        const { file: received } = await incoming.finish();
+        const { file: received, verified, sha256 } = await incoming.finish(endMessage.sha256);
 
         expect(new Uint8Array(await received.arrayBuffer())).toEqual(bytes);
+        expect(verified).toBe(true);
+        expect(sha256).toBe(await sha256Hex(bytes));
         expect(control).toEqual(['start', 'end']);
         expect(maxInFlight).toBeLessThanOrEqual(256 * 1024);
+    });
+
+    it('reports a mismatch when a byte is changed on the way', async () => {
+        const { file } = randomFile(300 * 1024);
+        let incoming = null;
+        let outgoing = null;
+        let endMessage = null;
+        let corrupted = false;
+
+        const channel = new FakeChannel((data) => {
+            if (typeof data === 'string') {
+                const message = parseMessage(data);
+                if (message.t === 'start') {
+                    incoming = new IncomingFile({ size: message.size, sink: new MemorySink('x.bin'), ackEvery: 64 * 1024, onAck: (written) => setTimeout(() => outgoing.ack(written), 0) });
+                }
+                if (message.t === 'end') {
+                    endMessage = message;
+                }
+            } else {
+                if (! corrupted) {
+                    new Uint8Array(data)[10] ^= 0xff;
+                    corrupted = true;
+                }
+                incoming.push(data);
+            }
+        });
+
+        outgoing = new OutgoingFile({ file, fid: 'f1', channel, chunkSize: 16 * 1024, window: 256 * 1024 });
+        await outgoing.run();
+        await new Promise((resolve) => setTimeout(resolve, 10));
+
+        expect((await incoming.finish(endMessage.sha256)).verified).toBe(false);
     });
 
     it('stops sending when cancelled mid-way', async () => {

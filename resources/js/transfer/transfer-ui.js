@@ -358,7 +358,7 @@ export function fileTransfer(config) {
             let entry = this.files.find((file) => file.fid === fid);
 
             if (! entry) {
-                entry = { fid, direction: patch.direction, name: patch.name, size: patch.size, status: 'waiting', done: 0, speedText: '', etaText: '', note: '', result: null, saved: false };
+                entry = { fid, direction: patch.direction, name: patch.name, size: patch.size, status: 'waiting', done: 0, speedText: '', etaText: '', note: '', result: null, saved: false, verified: null };
                 this.files.unshift(entry);
                 live.set(fid, { meter: new SpeedMeter(), done: 0 });
             }
@@ -399,7 +399,9 @@ export function fileTransfer(config) {
 
         statusLabel(entry) {
             if (entry.status === 'done') {
-                return entry.direction === 'out' ? 'Đã gửi xong' : 'Đã nhận xong';
+                const label = entry.direction === 'out' ? 'Đã gửi xong' : 'Đã nhận xong';
+
+                return entry.verified ? `${label} · ✓ giống hệt bản gốc` : label;
             }
 
             return STATUS_LABELS[entry.status] ?? entry.status;

@@ -443,10 +443,15 @@ export class TransferSession {
         const accepted = this.accepted.get(message.fid);
 
         try {
-            const result = await current.incoming.finish();
+            const result = await current.incoming.finish(typeof message.sha256 === 'string' ? message.sha256 : null);
             accepted.finished = true;
-            this.sendControl({ t: 'done', fid: message.fid });
-            this.on.onFile(message.fid, { status: 'done', done: accepted.size, result });
+            this.sendControl({ t: 'done', fid: message.fid, verified: result.verified });
+
+            if (result.verified === false) {
+                this.on.onFile(message.fid, { status: 'failed', done: accepted.size, verified: false, note: 'File nhận được không khớp bản gốc, hãy xóa và gửi lại' });
+            } else {
+                this.on.onFile(message.fid, { status: 'done', done: accepted.size, verified: result.verified, result });
+            }
         } catch (error) {
             accepted.finished = true;
             this.sendControl({ t: 'cancel', fid: message.fid });
@@ -520,6 +525,20 @@ export class TransferSession {
                     this.sending.ack(message.bytes);
                 }
                 break;
+            case 'done': {
+                // Bên nhận báo kết quả so mã SHA-256.
+                const entry = this.outgoing.get(message.fid);
+                if (entry && typeof message.verified === 'boolean') {
+                    entry.verified = message.verified;
+                    if (! message.verified) {
+                        entry.status = 'failed';
+                    }
+                    this.on.onFile(message.fid, message.verified
+                        ? { verified: true }
+                        : { status: 'failed', verified: false, note: 'Máy kia nhận được file không khớp bản gốc, hãy gửi lại' });
+                }
+                break;
+            }
             case 'cancel':
                 this.peerCancelled(message.fid);
                 break;
