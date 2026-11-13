@@ -176,7 +176,6 @@ test('login and the home page open the overview, which keeps its area in setting
         ->assertRedirect(route('net-worth', absolute: false));
 
     $this->actingAs($user);
-    $this->get('/')->assertRedirect(route('net-worth'));
     $this->get(route('net-worth'))->assertOk()->assertSeeInOrder(['Tổng', 'Hụi', 'Vàng', 'Tổng tài sản', 'Cài đặt']);
     $this->get(route('settings'))->assertOk()->assertDontSee('Dây hụi')->assertDontSee(route('gold.prices'));
 });

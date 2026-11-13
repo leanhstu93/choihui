@@ -16,8 +16,13 @@ test('guests see the landing page with sign-up links and share metadata', functi
     expect(public_path('images/og-image.png'))->toBeFile();
 });
 
-test('signed-in users go straight to their book', function () {
-    $this->actingAs(User::factory()->create())->get('/')->assertRedirect(route('net-worth'));
+test('signed-in users can still open the landing page, with a way back into their book', function () {
+    $this->actingAs(User::factory()->create())->get('/')
+        ->assertOk()
+        ->assertSee('Vào sổ')
+        ->assertSee(route('net-worth'))
+        ->assertDontSee(route('register'))
+        ->assertDontSee('Dùng miễn phí</a>', false);
 });
 
 test('robots and sitemap point to the current domain', function () {

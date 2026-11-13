@@ -6,6 +6,6 @@
     @auth
         <a href="{{ route('family.events.create') }}" class="mt-5 inline-block rounded-full bg-white px-6 py-3 font-semibold text-emerald-800 hover:bg-emerald-50">Thêm ngày nhớ →</a>
     @else
-        <a href="{{ route('register') }}" class="mt-5 inline-block rounded-full bg-white px-6 py-3 font-semibold text-emerald-800 hover:bg-emerald-50">Dùng miễn phí →</a>
+        <a href="{{ auth()->check() ? route('net-worth') : route('register') }}" class="mt-5 inline-block rounded-full bg-white px-6 py-3 font-semibold text-emerald-800 hover:bg-emerald-50">{{ auth()->check() ? 'Vào sổ của bạn →' : 'Dùng miễn phí →' }}</a>
     @endauth
 </section>

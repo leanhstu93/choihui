@@ -2,6 +2,8 @@
     /** @var array<string, string> $lunarLookup */
     /** @var array{year: int, months: list<list<array{int, int, int, int}>>, yearNames: array<int, string>, holidays: list<array<string, mixed>>} $calendar */
     $brand = config('app.name');
+    // Đã đăng nhập thì các nút mời dùng thử đưa thẳng vào sổ.
+    $startUrl = auth()->check() ? route('net-worth') : route('register');
     $title = $brand.' · Sổ tay gia đình: ngày giỗ âm lịch, sức khỏe, sửa chữa, vàng, tài sản';
     $description = 'Ứng dụng miễn phí ghi chép việc nhà: ngày giỗ theo âm lịch, sức khỏe cả nhà, sửa chữa đồ dùng, vàng và tổng tài sản. Tự tính, tự nhắc qua email.';
 
@@ -59,7 +61,7 @@
                         </h1>
                         <p class="mt-4 text-lg text-gray-600">Ngày giỗ, sức khỏe cả nhà, đồ sửa, vàng, tài sản. App tự tính, tự đổi lịch âm, nhắc trước qua email.</p>
                         <div class="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center md:justify-start">
-                            <a href="{{ route('register') }}" class="rounded-full bg-emerald-700 px-7 py-3.5 text-center font-semibold text-white shadow-lg shadow-emerald-700/30 transition hover:-translate-y-0.5 hover:bg-emerald-800">Mở sổ miễn phí</a>
+                            <a href="{{ $startUrl }}" class="rounded-full bg-emerald-700 px-7 py-3.5 text-center font-semibold text-white shadow-lg shadow-emerald-700/30 transition hover:-translate-y-0.5 hover:bg-emerald-800">{{ auth()->check() ? 'Vào sổ của bạn' : 'Mở sổ miễn phí' }}</a>
                             <a href="#cac-so" class="rounded-full border border-emerald-700 px-7 py-3.5 text-center font-semibold text-emerald-700 hover:bg-emerald-50">Xem có gì →</a>
                         </div>
                     </div>
@@ -229,7 +231,7 @@
                                         <span class="font-semibold">{{ $point }}</span>
                                     </li>
                                 @endforeach
-                                <li><a href="{{ route('register') }}" class="inline-block rounded-full bg-emerald-700 px-6 py-3 font-semibold text-white hover:bg-emerald-800">Mở sổ {{ mb_strtolower($name) }} →</a></li>
+                                <li><a href="{{ $startUrl }}" class="inline-block rounded-full bg-emerald-700 px-6 py-3 font-semibold text-white hover:bg-emerald-800">Mở sổ {{ mb_strtolower($name) }} →</a></li>
                             </ul>
                         @endforeach
                     </div>
@@ -247,7 +249,7 @@
                     </div>
 
                     <div class="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-                        <a href="{{ route('register') }}" class="w-full max-w-md rounded-full bg-emerald-700 px-6 py-3 text-center font-semibold text-white hover:bg-emerald-800 sm:w-auto">Thêm ngày giỗ, sinh nhật nhà bạn, app nhắc trước →</a>
+                        <a href="{{ $startUrl }}" class="w-full max-w-md rounded-full bg-emerald-700 px-6 py-3 text-center font-semibold text-white hover:bg-emerald-800 sm:w-auto">Thêm ngày giỗ, sinh nhật nhà bạn, app nhắc trước →</a>
                         <a href="{{ route('lunar.today') }}" class="font-semibold text-emerald-700 hover:underline">Mở lịch âm đầy đủ →</a>
                     </div>
                     <p class="mt-4 text-center text-xs text-gray-500">Âm lịch theo giờ Việt Nam. Ngày tốt xấu chỉ để tham khảo. Lịch nghỉ Tết cụ thể do Chính phủ công bố hằng năm.</p>
@@ -295,7 +297,7 @@
                         </div>
                     </div>
 
-                    <a href="{{ route('register') }}" class="mx-auto mt-8 block max-w-sm rounded-full bg-emerald-500 py-3 text-center font-semibold text-gray-900 hover:bg-emerald-400">Lưu ngày này vào sổ, app nhắc trước →</a>
+                    <a href="{{ $startUrl }}" class="mx-auto mt-8 block max-w-sm rounded-full bg-emerald-500 py-3 text-center font-semibold text-gray-900 hover:bg-emerald-400">Lưu ngày này vào sổ, app nhắc trước →</a>
                     <p class="mt-6 text-center text-xs text-gray-500">Theo giờ Việt Nam. Năm có tháng nhuận vẫn lấy tháng thường; ngày 30 gặp tháng thiếu tính ngày 29.</p>
                 </div>
             </section>
@@ -341,7 +343,7 @@
             <section class="bg-gradient-to-br from-emerald-700 to-emerald-900 px-4 py-16 text-center text-white">
                 <h2 class="text-3xl font-bold">Bỏ sổ giấy. Dùng {{ $brand }}.</h2>
                 <p class="mt-2 text-emerald-100">Tạo tài khoản 30 giây. Miễn phí.</p>
-                <a href="{{ route('register') }}" class="mt-6 inline-block rounded-full bg-white px-8 py-3.5 font-semibold text-emerald-800 shadow-lg transition hover:-translate-y-0.5">Mở sổ ngay</a>
+                <a href="{{ $startUrl }}" class="mt-6 inline-block rounded-full bg-white px-8 py-3.5 font-semibold text-emerald-800 shadow-lg transition hover:-translate-y-0.5">{{ auth()->check() ? 'Vào sổ của bạn' : 'Mở sổ ngay' }}</a>
             </section>
         </main>
 

@@ -50,10 +50,9 @@ use App\Queries\YearCalendar;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Route;
 
-// Trang giới thiệu cho khách; người đã đăng nhập vào thẳng sổ của mình.
-Route::get('/', fn (LunarDateLookup $lunar, YearCalendar $calendar) => auth()->check()
-    ? redirect()->route('net-worth')
-    : view('welcome', ['lunarLookup' => $lunar->from(CarbonImmutable::today()), 'calendar' => $calendar->forYear(CarbonImmutable::today()->year)]))->name('home');
+// Trang giới thiệu, ai cũng xem được; người đã đăng nhập thấy nút "Vào sổ" (đăng nhập xong
+// và app cài trên máy vẫn vào thẳng trang Tổng).
+Route::get('/', fn (LunarDateLookup $lunar, YearCalendar $calendar) => view('welcome', ['lunarLookup' => $lunar->from(CarbonImmutable::today()), 'calendar' => $calendar->forYear(CarbonImmutable::today()->year)]))->name('home');
 
 // Gửi file trực tiếp giữa hai thiết bị (không cần đăng nhập); ?ma= là mã phòng từ QR.
 Route::view('gui-file', 'transfer.show')->name('transfer.show');
