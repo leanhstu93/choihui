@@ -61,7 +61,7 @@
         <section x-show="['connecting', 'relaying'].includes(phase)" class="mt-5 rounded-3xl bg-white p-6 text-center shadow-sm" style="display: none">
             <div class="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-700"></div>
             <p class="mt-3 font-semibold" x-text="phase === 'relaying' ? 'Chưa nối thẳng được, đang thử qua máy chủ trung chuyển…' : 'Đang kết nối hai máy…'"></p>
-            <p class="mt-1 text-sm text-gray-500" x-text="phase === 'relaying' ? (relayNote || 'Dữ liệu vẫn được mã hóa, máy chủ trung chuyển không đọc được.') : 'Thường chỉ mất vài giây.'"></p>
+            <p class="mt-1 text-sm text-gray-500" x-text="phase === 'relaying' ? 'Dữ liệu vẫn được mã hóa, máy chủ trung chuyển không đọc được.' : 'Thường chỉ mất vài giây.'"></p>
             <p x-show="phase === 'connecting' && room?.turnNotice" class="mx-auto mt-3 max-w-md rounded-2xl bg-amber-50 p-3 text-left text-sm text-amber-900" x-text="room?.turnNotice"></p>
             <button type="button" @click="startOver()" class="mt-4 text-sm font-semibold text-gray-500 underline">Hủy, tạo mã mới</button>
         </section>

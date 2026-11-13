@@ -102,20 +102,14 @@ final class TransferRoomController
     }
 
     /**
-     * Kết nối thẳng thất bại: giao mật khẩu TURN tạm thời của riêng phòng này (có giới hạn) để đi
-     * vòng. readyIn > 0 nghĩa là mật khẩu vừa tạo, máy cần chờ ngần ấy giây mới dùng được.
+     * Kết nối thẳng thất bại: trả cấu hình ICE có máy chủ TURN (giới hạn tần suất và số lượt) để đi vòng.
      */
     public function turn(Request $request, string $code, IssueTurnCredentials $issueTurn): JsonResponse
     {
-        return $this->withRoom($request, $code, function (TransferRoom $room) use ($request, $issueTurn): JsonResponse {
-            ['iceServers' => $servers, 'readyIn' => $readyIn] = $issueTurn->handle($room, hash('sha256', $request->ip().config('app.key')));
-
-            return response()->json([
-                'iceServers' => array_merge($this->iceServers(), $servers),
-                'readyIn' => $readyIn,
-                'maxRelayBytes' => (int) config('services.transfer.turn_max_bytes'),
-            ]);
-        });
+        return $this->withRoom($request, $code, fn (TransferRoom $room): JsonResponse => response()->json([
+            'iceServers' => array_merge($this->iceServers(), $issueTurn->handle($room, hash('sha256', $request->ip().config('app.key')))),
+            'maxRelayBytes' => (int) config('services.transfer.turn_max_bytes'),
+        ]));
     }
 
     public function destroy(Request $request, string $code, CloseTransferRoom $closeRoom): JsonResponse

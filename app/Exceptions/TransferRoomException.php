@@ -64,9 +64,4 @@ final class TransferRoomException extends RuntimeException
     {
         return new self('turn_monthly_limit', self::MONTHLY_LIMIT_MESSAGE, 429);
     }
-
-    public static function turnUnavailable(): self
-    {
-        return new self('turn_unavailable', 'Máy chủ trung chuyển đang bận. Hãy thử lại sau ít phút, hoặc cho hai máy dùng chung một wifi.', 503);
-    }
 }

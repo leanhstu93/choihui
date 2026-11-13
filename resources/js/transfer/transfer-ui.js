@@ -62,7 +62,6 @@ export function fileTransfer(config) {
         phase: 'start',
         message: '',
         errorReason: '',
-        relayNote: '',
         room: null,
         joinInput: '',
         joining: false,
@@ -158,7 +157,6 @@ export function fileTransfer(config) {
                 handlers: {
                     onState: (phase, message = '', reason = '') => {
                         this.phase = phase;
-                        this.relayNote = phase === 'relaying' ? message : '';
                         if (phase === 'error' || phase === 'disconnected') {
                             this.message = message;
                             this.errorReason = reason;

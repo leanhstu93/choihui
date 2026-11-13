@@ -11,9 +11,6 @@ const DIRECT_TIMEOUT = 10000;
 /** Thời gian chờ thêm khi đã đi vòng qua trung chuyển. */
 const RELAY_TIMEOUT = 20000;
 
-/** Chờ mật khẩu trung chuyển mới tạo lan truyền tối đa ngần này giây. */
-const MAX_RELAY_WAIT = 150;
-
 const NO_DIRECT_MESSAGE = 'Không kết nối được hai máy với nhau. Mạng có thể đang chặn kết nối trực tiếp: hãy cho hai máy dùng chung một wifi rồi thử lại.';
 
 /**
@@ -157,7 +154,7 @@ export class TransferSession {
     }
 
     /**
-     * Không nối thẳng được: xin mật khẩu TURN tạm thời rồi bắt tay lại (ICE restart) để đi vòng.
+     * Không nối thẳng được: xin cấu hình TURN từ server rồi bắt tay lại (ICE restart) để đi vòng.
      * Server giới hạn số lượt; hết lượt thì báo rõ và gợi ý dùng chung wifi.
      */
     async fallbackToRelay() {
@@ -175,23 +172,10 @@ export class TransferSession {
         }
 
         this.on.onState('relaying');
-        let readyIn = 0;
 
         try {
             const data = await request((...args) => fetch(...args), `${this.apiBase}/${this.room.code}/turn`, { method: 'POST', token: this.room.token });
             this.room.maxRelayBytes = data.maxRelayBytes;
-            readyIn = Math.min(MAX_RELAY_WAIT, Math.max(0, Number(data.readyIn) || 0));
-
-            if (readyIn > 0) {
-                // Mật khẩu vừa tạo, các máy chủ trung chuyển chưa nhận: chờ rồi mới bắt tay lại.
-                this.on.onState('relaying', `Đang chuẩn bị máy chủ trung chuyển, khoảng ${readyIn} giây nữa…`);
-                await new Promise((resolve) => setTimeout(resolve, readyIn * 1000));
-                if (this.closed || this.channel?.readyState === 'open') {
-                    return;
-                }
-                this.on.onState('relaying');
-            }
-
             this.pc.setConfiguration({ iceServers: data.iceServers });
 
             if (this.room.role === 'sender') {

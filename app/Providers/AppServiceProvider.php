@@ -38,6 +38,8 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('transfer-create', fn (Request $request) => Limit::perHour(200)->by($ipKey($request))
             ->response(fn () => response()->json(['reason' => 'too_many_rooms', 'message' => 'Bạn đã tạo quá nhiều phòng trong 1 giờ. Thử lại sau ít phút.'], 429)));
         RateLimiter::for('transfer-signal', fn (Request $request) => Limit::perMinute(600)->by($ipKey($request)));
+        RateLimiter::for('transfer-turn', fn (Request $request) => Limit::perMinute(10)->by($ipKey($request))
+            ->response(fn () => response()->json(['reason' => 'too_many_turn_requests', 'message' => 'Bạn hỏi máy chủ trung chuyển quá nhiều lần. Đợi 1 phút rồi thử lại.'], 429)));
 
         Number::useLocale('vi');
         Carbon::setLocale('vi');

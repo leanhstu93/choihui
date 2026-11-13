@@ -10,6 +10,7 @@ use Throwable;
 /**
  * Hạn mức TURN miễn phí của tháng. Hỏi Metered dung lượng đã dùng (lưu tạm vài phút); còn chưa đủ
  * cho một lượt gửi tối đa (turn_max_bytes) thì coi như hết, trang chỉ dùng kết nối trực tiếp.
+ * Không cấu hình METERED_APP/METERED_SECRET_KEY thì không bao giờ coi là hết.
  */
 final class TurnQuota
 {
@@ -34,7 +35,7 @@ final class TurnQuota
     }
 
     /**
-     * Hỏi Metered rồi lưu kết quả. Gọi từ lịch chạy mỗi phút (transfer:turn-pool).
+     * Hỏi Metered rồi lưu kết quả trong CACHE_SECONDS.
      *
      * @return array{usage: float, quota: float, exhausted: bool}|null
      */

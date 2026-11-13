@@ -6,30 +6,28 @@ namespace App\Actions\Transfer;
 
 use App\Exceptions\TransferRoomException;
 use App\Models\TransferRoom;
-use App\Models\TransferTurnCredential;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\RateLimiter;
-use Throwable;
 
 /**
- * Giao mật khẩu TURN tạm thời (Open Relay / Metered) cho một phòng không nối thẳng được. Mỗi phòng
- * nhận riêng một mật khẩu lấy từ kho tạo sẵn; hai máy trong phòng hỏi thì nhận cùng một mật khẩu
- * và chỉ tính một lượt. Giới hạn số lượt theo IP mỗi ngày; hết hạn mức tháng thì không cấp nữa.
+ * Trả cấu hình máy chủ TURN của Metered (credential cố định trong .env) cho một phòng không nối
+ * thẳng được. Không có gì ghi cứng ở frontend: trình duyệt chỉ biết TURN qua endpoint này, vốn có
+ * giới hạn tần suất. Mỗi IP có số lượt mỗi ngày (hai máy trong một phòng chỉ tính một lượt); hết
+ * hạn mức tháng thì không trả nữa.
  */
 final class IssueTurnCredentials
 {
-    public function __construct(
-        private readonly TurnQuota $quota,
-        private readonly RefillTurnPool $pool,
-    ) {}
+    public function __construct(private readonly TurnQuota $quota) {}
 
     public static function enabled(): bool
     {
-        return MeteredTurnClient::configured();
+        return filled(config('services.transfer.turn_username'))
+            && filled(config('services.transfer.turn_password'))
+            && self::urls() !== [];
     }
 
     /**
-     * @return array{iceServers: list<array<string, mixed>>, readyIn: int}
+     * @return list<array{urls: list<string>, username?: string, credential?: string}>
      *
      * @throws TransferRoomException
      */
@@ -39,67 +37,55 @@ final class IssueTurnCredentials
             throw TransferRoomException::turnDisabled();
         }
 
-        // Khóa phòng: hai máy hỏi cùng lúc vẫn chỉ nhận một mật khẩu, tính một lượt.
-        return DB::transaction(function () use ($room, $ipKey): array {
-            TransferRoom::query()->whereKey($room->id)->lockForUpdate()->first();
+        if ($this->quota->exhausted(refresh: true)) {
+            throw TransferRoomException::turnMonthlyLimit();
+        }
 
-            $existing = TransferTurnCredential::query()->where('transfer_room_id', $room->id)->where('expires_at', '>', now())->first();
-            if ($existing !== null) {
-                return $this->payload($existing);
-            }
-
-            if ($this->quota->exhausted(refresh: true)) {
-                throw TransferRoomException::turnMonthlyLimit();
-            }
-
+        // Máy thứ hai của cùng phòng không tính thêm lượt.
+        if (Cache::add("transfer-turn-room:{$room->id}", true, now()->addDay())) {
             $dailyKey = "transfer-turn-ip:{$ipKey}";
+
             if (RateLimiter::tooManyAttempts($dailyKey, (int) config('services.transfer.turn_daily_per_ip'))) {
+                Cache::forget("transfer-turn-room:{$room->id}");
+
                 throw TransferRoomException::turnDailyLimit();
             }
 
-            $credential = $this->claimFromPool($room) ?? $this->createForRoom($room);
             RateLimiter::hit($dailyKey, 86400);
-
-            return $this->payload($credential);
-        });
-    }
-
-    /**
-     * Lấy mật khẩu đã sẵn sàng sớm nhất; chưa có thì lấy cái sắp sẵn sàng.
-     */
-    private function claimFromPool(TransferRoom $room): ?TransferTurnCredential
-    {
-        $credential = TransferTurnCredential::query()->available()->orderBy('ready_at')->lockForUpdate()->first();
-        $credential?->update(['transfer_room_id' => $room->id, 'issued_at' => now()]);
-
-        return $credential;
-    }
-
-    /**
-     * Kho trống (vd. lịch chưa kịp chạy): tạo ngay một mật khẩu, máy phải chờ nó lan truyền.
-     *
-     * @throws TransferRoomException
-     */
-    private function createForRoom(TransferRoom $room): TransferTurnCredential
-    {
-        try {
-            $credential = $this->pool->create();
-        } catch (Throwable $exception) {
-            report($exception);
-
-            throw TransferRoomException::turnUnavailable();
         }
 
-        $credential->update(['transfer_room_id' => $room->id, 'issued_at' => now()]);
-
-        return $credential;
+        return $this->servers();
     }
 
     /**
-     * @return array{iceServers: list<array<string, mixed>>, readyIn: int}
+     * STUN không cần mật khẩu; TURN/TURNS dùng chung một bộ username/password.
+     *
+     * @return list<array{urls: list<string>, username?: string, credential?: string}>
      */
-    private function payload(TransferTurnCredential $credential): array
+    private function servers(): array
     {
-        return ['iceServers' => $credential->ice_servers, 'readyIn' => $credential->secondsUntilReady()];
+        $urls = self::urls();
+        $stun = array_values(array_filter($urls, fn (string $url): bool => str_starts_with($url, 'stun:')));
+        $turn = array_values(array_filter($urls, fn (string $url): bool => ! str_starts_with($url, 'stun:')));
+
+        return array_values(array_filter([
+            $stun === [] ? null : ['urls' => $stun],
+            $turn === [] ? null : [
+                'urls' => $turn,
+                'username' => (string) config('services.transfer.turn_username'),
+                'credential' => (string) config('services.transfer.turn_password'),
+            ],
+        ]));
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function urls(): array
+    {
+        return array_values(array_filter(
+            array_map('trim', (array) config('services.transfer.turn_urls', [])),
+            fn (string $url): bool => preg_match('/^(stun|turns?):/', $url) === 1,
+        ));
     }
 }

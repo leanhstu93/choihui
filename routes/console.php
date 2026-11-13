@@ -26,7 +26,3 @@ Schedule::command('holidays:remind-admin')
 Schedule::command('transfer:prune')
     ->everyFiveMinutes()
     ->withoutOverlapping();
-
-Schedule::command('transfer:turn-pool')
-    ->everyMinute()
-    ->withoutOverlapping();
