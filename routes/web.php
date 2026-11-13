@@ -55,6 +55,9 @@ Route::get('/', fn (LunarDateLookup $lunar, YearCalendar $calendar) => auth()->c
     ? redirect()->route('net-worth')
     : view('welcome', ['lunarLookup' => $lunar->from(CarbonImmutable::today()), 'calendar' => $calendar->forYear(CarbonImmutable::today()->year)]))->name('home');
 
+// Gửi file trực tiếp giữa hai thiết bị (không cần đăng nhập); ?ma= là mã phòng từ QR.
+Route::view('gui-file', 'transfer.show')->name('transfer.show');
+
 // Lịch âm công khai (khối lịch trên trang giới thiệu và các trang /lich-am cho Google).
 Route::controller(LunarCalendarController::class)->name('lunar.')->group(function () {
     Route::get('lich/{year}.json', 'data')->whereNumber('year')->name('data');

@@ -43,4 +43,18 @@ return [
         'measurement_id' => env('GA_MEASUREMENT_ID') ?: (env('APP_ENV') === 'production' ? 'G-N77C3ZFV99' : null),
     ],
 
+    // Gửi file trực tiếp (/gui-file): máy chủ STUN công cộng giúp hai máy tìm đường nối thẳng.
+    'transfer' => [
+        'stun_urls' => array_values(array_filter(explode(',', (string) env('TRANSFER_STUN_URLS', 'stun:stun.cloudflare.com:3478,stun:stun.l.google.com:19302')))),
+
+        // Máy chủ trung chuyển (Cloudflare TURN) khi mạng chặn kết nối thẳng. Để trống là tắt.
+        'turn_key_id' => env('CLOUDFLARE_TURN_KEY_ID'),
+        'turn_api_token' => env('CLOUDFLARE_TURN_API_TOKEN'),
+        'turn_ttl' => (int) env('TRANSFER_TURN_TTL', 3600),
+        // Giới hạn băng thông trung chuyển (tốn tiền của chủ trang).
+        'turn_max_bytes' => (int) env('TRANSFER_TURN_MAX_GB', 2) * 1024 ** 3,
+        'turn_daily_per_ip' => (int) env('TRANSFER_TURN_DAILY_PER_IP', 5),
+        'turn_monthly_sessions' => (int) env('TRANSFER_TURN_MONTHLY_SESSIONS', 400),
+    ],
+
 ];

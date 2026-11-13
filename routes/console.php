@@ -22,3 +22,7 @@ Schedule::command('holidays:remind-admin')
     ->at('08:00')
     ->timezone('Asia/Ho_Chi_Minh')
     ->withoutOverlapping();
+
+Schedule::command('transfer:prune')
+    ->everyFiveMinutes()
+    ->withoutOverlapping();

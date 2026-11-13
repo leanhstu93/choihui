@@ -23,6 +23,7 @@
                 </a>
                 <nav class="flex items-center gap-3 text-sm">
                     <a href="{{ route('lunar.today') }}" class="hidden font-medium text-gray-600 hover:text-emerald-700 sm:inline">Lịch âm</a>
+                    <a href="{{ route('transfer.show') }}" class="hidden font-medium text-gray-600 hover:text-emerald-700 sm:inline">Gửi file</a>
                     @auth
                         <a href="{{ route('net-worth') }}" class="rounded-full bg-emerald-700 px-4 py-2 font-semibold text-white hover:bg-emerald-800">Vào sổ</a>
                     @else
