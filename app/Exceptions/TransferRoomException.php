@@ -12,6 +12,9 @@ use RuntimeException;
  */
 final class TransferRoomException extends RuntimeException
 {
+    /** Hết dung lượng TURN miễn phí của tháng: chỉ còn kết nối trực tiếp. */
+    public const MONTHLY_LIMIT_MESSAGE = 'Máy chủ trung chuyển đã hết dung lượng miễn phí của tháng này, nên chỉ gửi được khi hai máy kết nối thẳng với nhau. Nếu không kết nối được, hãy cho hai máy dùng chung một wifi.';
+
     public function __construct(public readonly string $reason, string $message, public readonly int $status)
     {
         parent::__construct($message);
@@ -45,5 +48,25 @@ final class TransferRoomException extends RuntimeException
     public static function tooManyAttempts(int $seconds): self
     {
         return new self('too_many_attempts', 'Bạn nhập sai mã nhiều lần. Thử lại sau '.max(1, (int) ceil($seconds / 60)).' phút, hoặc quét mã QR trên máy gửi.', 429);
+    }
+
+    public static function turnDisabled(): self
+    {
+        return new self('turn_disabled', 'Mạng đang chặn kết nối thẳng giữa hai máy. Hãy cho hai máy dùng chung một wifi rồi thử lại.', 503);
+    }
+
+    public static function turnDailyLimit(): self
+    {
+        return new self('turn_daily_limit', 'Hôm nay bạn đã dùng hết lượt đi qua máy chủ trung chuyển. Hãy cho hai máy dùng chung một wifi để gửi trực tiếp (không giới hạn), hoặc thử lại vào ngày mai.', 429);
+    }
+
+    public static function turnMonthlyLimit(): self
+    {
+        return new self('turn_monthly_limit', self::MONTHLY_LIMIT_MESSAGE, 429);
+    }
+
+    public static function turnUnavailable(): self
+    {
+        return new self('turn_unavailable', 'Máy chủ trung chuyển đang bận. Hãy thử lại sau ít phút, hoặc cho hai máy dùng chung một wifi.', 503);
     }
 }

@@ -3,6 +3,7 @@ import { ACK_EVERY, CHUNK_SIZE, MAX_TEXT, parseMessage, randomId } from './proto
 import { OutgoingFile } from './sender.js';
 import { request, Signaling } from './signaling.js';
 import { connectionKind } from './stats.js';
+import { formatBytes } from './storage.js';
 
 /** Thử nối thẳng trong ngần này; chưa được thì đi vòng qua máy chủ trung chuyển (nếu có). */
 const DIRECT_TIMEOUT = 10000;
@@ -10,7 +11,21 @@ const DIRECT_TIMEOUT = 10000;
 /** Thời gian chờ thêm khi đã đi vòng qua trung chuyển. */
 const RELAY_TIMEOUT = 20000;
 
+/** Chờ mật khẩu trung chuyển mới tạo lan truyền tối đa ngần này giây. */
+const MAX_RELAY_WAIT = 150;
+
 const NO_DIRECT_MESSAGE = 'Không kết nối được hai máy với nhau. Mạng có thể đang chặn kết nối trực tiếp: hãy cho hai máy dùng chung một wifi rồi thử lại.';
+
+/**
+ * Câu báo khi một lượt gửi qua trung chuyển vượt giới hạn, hoặc null nếu gửi được.
+ */
+export function relayLimitMessage(total, relayed, maxRelayBytes) {
+    if (! relayed || ! maxRelayBytes || total <= maxRelayBytes) {
+        return null;
+    }
+
+    return `Hai máy đang kết nối qua máy chủ trung chuyển nên mỗi lượt gửi tối đa ${formatBytes(maxRelayBytes)} (lượt này ${formatBytes(total)}). Hãy cho hai máy dùng chung một wifi để gửi trực tiếp, không giới hạn dung lượng, rồi kết nối lại.`;
+}
 
 /**
  * Một phiên gửi file giữa hai thiết bị: bắt tay WebRTC qua server mai mối, rồi mọi thứ đi trên một
@@ -34,7 +49,6 @@ export class TransferSession {
         this.usingRelay = false;
         this.apiBase = apiBase;
         this.kind = null;
-        this.relayBytes = 0;
 
         // Gửi đi
         this.outgoing = new Map();
@@ -154,16 +168,30 @@ export class TransferSession {
         clearTimeout(this.connectTimer);
 
         if (! this.room.turnAvailable) {
-            this.fail(NO_DIRECT_MESSAGE, 'no_direct');
+            // Hết hạn mức trung chuyển của tháng (turnNotice) hoặc chưa bật: chỉ có kết nối thẳng.
+            this.fail(this.room.turnNotice ?? NO_DIRECT_MESSAGE, this.room.turnNotice ? 'turn_monthly_limit' : 'no_direct');
 
             return;
         }
 
         this.on.onState('relaying');
+        let readyIn = 0;
 
         try {
             const data = await request((...args) => fetch(...args), `${this.apiBase}/${this.room.code}/turn`, { method: 'POST', token: this.room.token });
             this.room.maxRelayBytes = data.maxRelayBytes;
+            readyIn = Math.min(MAX_RELAY_WAIT, Math.max(0, Number(data.readyIn) || 0));
+
+            if (readyIn > 0) {
+                // Mật khẩu vừa tạo, các máy chủ trung chuyển chưa nhận: chờ rồi mới bắt tay lại.
+                this.on.onState('relaying', `Đang chuẩn bị máy chủ trung chuyển, khoảng ${readyIn} giây nữa…`);
+                await new Promise((resolve) => setTimeout(resolve, readyIn * 1000));
+                if (this.closed || this.channel?.readyState === 'open') {
+                    return;
+                }
+                this.on.onState('relaying');
+            }
+
             this.pc.setConfiguration({ iceServers: data.iceServers });
 
             if (this.room.role === 'sender') {
@@ -172,6 +200,10 @@ export class TransferSession {
                 await this.signaling.send({ type: 'description', description: this.pc.localDescription.toJSON() });
             }
         } catch (error) {
+            if (error.reason === 'turn_monthly_limit') {
+                this.room.turnAvailable = false;
+                this.room.turnNotice = error.message;
+            }
             this.fail(error.message ?? NO_DIRECT_MESSAGE, error.reason ?? 'relay_failed');
 
             return;
@@ -215,6 +247,11 @@ export class TransferSession {
         }
     }
 
+    /** Đang đi vòng qua trung chuyển (chưa đọc được loại kết nối thì dựa vào việc đã xin TURN). */
+    get isRelayed() {
+        return this.kind === 'relay' || (this.kind === null && this.usingRelay);
+    }
+
     get maxChunk() {
         const limit = this.pc?.sctp?.maxMessageSize;
 
@@ -240,18 +277,14 @@ export class TransferSession {
 
     /**
      * Mời bên kia nhận các file này. Chưa gửi byte nào cho tới khi bên kia bấm Nhận.
-     * Đang đi vòng qua trung chuyển thì mỗi phiên chỉ được tới maxRelayBytes: trả về câu báo lỗi.
+     * Đang đi vòng qua trung chuyển thì mỗi lượt gửi chỉ được tới maxRelayBytes: trả về câu báo lỗi.
      */
     offerFiles(files) {
         const total = files.reduce((sum, file) => sum + file.size, 0);
+        const message = relayLimitMessage(total, this.isRelayed, this.room.maxRelayBytes);
 
-        if (this.kind === 'relay' && this.room.maxRelayBytes && this.relayBytes + total > this.room.maxRelayBytes) {
-            const left = Math.max(0, this.room.maxRelayBytes - this.relayBytes);
-
-            return `Đang đi vòng qua máy chủ trung chuyển nên mỗi lần kết nối chỉ gửi được tối đa ${Math.round(this.room.maxRelayBytes / 1024 ** 3)} GB (còn ${(left / 1024 ** 2).toFixed(0)} MB). Hãy cho hai máy dùng chung một wifi để gửi file lớn, không giới hạn.`;
-        }
-        if (this.kind === 'relay') {
-            this.relayBytes += total;
+        if (message) {
+            return message;
         }
 
         const id = randomId();

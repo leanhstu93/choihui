@@ -41,6 +41,11 @@
 
             <div x-show="phase === 'creating'" class="mt-4 text-sm text-gray-500">Đang tạo mã…</div>
 
+            <p x-show="room?.turnNotice && phase === 'waiting'" class="mt-4 flex items-start gap-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
+                <span aria-hidden="true">📶</span>
+                <span x-text="room?.turnNotice"></span>
+            </p>
+
             <div class="mt-5 border-t border-gray-100 pt-5">
                 <label for="join-code" class="text-sm font-semibold text-gray-700">Có mã từ máy khác?</label>
                 <form @submit.prevent="join()" class="mt-2 flex gap-2">
@@ -56,7 +61,8 @@
         <section x-show="['connecting', 'relaying'].includes(phase)" class="mt-5 rounded-3xl bg-white p-6 text-center shadow-sm" style="display: none">
             <div class="mx-auto h-10 w-10 animate-spin rounded-full border-4 border-emerald-200 border-t-emerald-700"></div>
             <p class="mt-3 font-semibold" x-text="phase === 'relaying' ? 'Chưa nối thẳng được, đang thử qua máy chủ trung chuyển…' : 'Đang kết nối hai máy…'"></p>
-            <p class="mt-1 text-sm text-gray-500" x-text="phase === 'relaying' ? 'Dữ liệu vẫn được mã hóa, máy chủ trung chuyển không đọc được.' : 'Thường chỉ mất vài giây.'"></p>
+            <p class="mt-1 text-sm text-gray-500" x-text="phase === 'relaying' ? (relayNote || 'Dữ liệu vẫn được mã hóa, máy chủ trung chuyển không đọc được.') : 'Thường chỉ mất vài giây.'"></p>
+            <p x-show="phase === 'connecting' && room?.turnNotice" class="mx-auto mt-3 max-w-md rounded-2xl bg-amber-50 p-3 text-left text-sm text-amber-900" x-text="room?.turnNotice"></p>
             <button type="button" @click="startOver()" class="mt-4 text-sm font-semibold text-gray-500 underline">Hủy, tạo mã mới</button>
         </section>
 
@@ -79,7 +85,7 @@
                 <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="kind === 'relay' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'" x-text="kind === 'relay' ? 'Qua trung chuyển' : (kind ? 'Trực tiếp' : '…')"></span>
                 <button type="button" @click="disconnect()" class="rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50">Ngắt</button>
             </div>
-            <p x-show="kind === 'relay'" class="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Mạng đang chặn kết nối thẳng nên dữ liệu đi vòng qua máy chủ trung chuyển (vẫn được mã hóa, máy chủ không đọc được). Tốc độ có thể chậm hơn; dùng chung một wifi sẽ nhanh nhất.</p>
+            <p x-show="kind === 'relay'" class="rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Mạng đang chặn kết nối thẳng nên dữ liệu đi vòng qua máy chủ trung chuyển (vẫn được mã hóa, máy chủ không đọc được). Tốc độ có thể chậm hơn và mỗi lượt gửi tối đa <b x-text="formatBytes(room?.maxRelayBytes ?? 0)"></b>; dùng chung một wifi sẽ nhanh nhất và không giới hạn.</p>
 
             {{-- Lời mời nhận file --}}
             <template x-for="offer in offers" :key="offer.id">
@@ -105,7 +111,7 @@
                 <input type="file" multiple class="sr-only" @change="pickFiles($event)">
                 <div class="text-4xl" aria-hidden="true">📤</div>
                 <div class="mt-2 text-lg font-semibold">Chọn file để gửi</div>
-                <div class="text-sm text-gray-500"><span class="hidden sm:inline">hoặc kéo thả vào đây · </span>gửi nhiều file một lúc, không giới hạn dung lượng</div>
+                <div class="text-sm text-gray-500"><span class="hidden sm:inline">hoặc kéo thả vào đây · </span>gửi nhiều file một lúc, <span x-text="kind === 'relay' && room?.maxRelayBytes ? `tối đa ${formatBytes(room.maxRelayBytes)} mỗi lượt` : 'không giới hạn dung lượng'"></span></div>
             </label>
             <p x-show="message && phase === 'connected'" x-text="message" class="text-sm font-medium text-rose-700"></p>
 

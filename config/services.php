@@ -47,14 +47,21 @@ return [
     'transfer' => [
         'stun_urls' => array_values(array_filter(explode(',', (string) env('TRANSFER_STUN_URLS', 'stun:stun.cloudflare.com:3478,stun:stun.l.google.com:19302')))),
 
-        // Máy chủ trung chuyển (Cloudflare TURN) khi mạng chặn kết nối thẳng. Để trống là tắt.
-        'turn_key_id' => env('CLOUDFLARE_TURN_KEY_ID'),
-        'turn_api_token' => env('CLOUDFLARE_TURN_API_TOKEN'),
-        'turn_ttl' => (int) env('TRANSFER_TURN_TTL', 3600),
-        // Giới hạn băng thông trung chuyển (tốn tiền của chủ trang).
-        'turn_max_bytes' => (int) env('TRANSFER_TURN_MAX_GB', 2) * 1024 ** 3,
+        // Máy chủ trung chuyển (Open Relay của Metered, gói miễn phí không cần thẻ) khi mạng chặn
+        // kết nối thẳng. METERED_APP là tên miền con (<app>.metered.live). Để trống là tắt.
+        'metered_app' => env('METERED_APP'),
+        'metered_secret_key' => env('METERED_SECRET_KEY'),
+        // Mật khẩu tạm thời: tạo sẵn (cần tới 2 phút để lan truyền), hết hạn cứng sau turn_credential_hours,
+        // chỉ giao khi còn ít nhất turn_min_remaining_minutes để phiên gửi không bị cắt giữa chừng.
+        'turn_credential_hours' => (int) env('TRANSFER_TURN_CREDENTIAL_HOURS', 6),
+        'turn_min_remaining_minutes' => (int) env('TRANSFER_TURN_MIN_REMAINING_MINUTES', 120),
+        'turn_propagation_seconds' => (int) env('TRANSFER_TURN_PROPAGATION_SECONDS', 120),
+        'turn_pool_size' => (int) env('TRANSFER_TURN_POOL_SIZE', 2),
+        // Mỗi lượt gửi qua trung chuyển tối đa ngần này; lớn hơn thì nhắc dùng chung wifi.
+        'turn_max_bytes' => (int) env('TRANSFER_TURN_MAX_MB', 500) * 1024 ** 2,
         'turn_daily_per_ip' => (int) env('TRANSFER_TURN_DAILY_PER_IP', 5),
-        'turn_monthly_sessions' => (int) env('TRANSFER_TURN_MONTHLY_SESSIONS', 400),
+        // Hạn mức tháng (GB) dùng khi Metered không trả về quotaInGB.
+        'turn_monthly_gb' => (float) env('TRANSFER_TURN_MONTHLY_GB', 20),
     ],
 
 ];

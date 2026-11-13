@@ -10,6 +10,7 @@ use App\Actions\Transfer\IssueTurnCredentials;
 use App\Actions\Transfer\JoinTransferRoom;
 use App\Actions\Transfer\PostTransferSignal;
 use App\Actions\Transfer\PullTransferSignals;
+use App\Actions\Transfer\TurnQuota;
 use App\Domain\RoomCode;
 use App\Enums\TransferRole;
 use App\Exceptions\TransferRoomException;
@@ -101,14 +102,20 @@ final class TransferRoomController
     }
 
     /**
-     * Kết nối thẳng thất bại: cấp mật khẩu TURN tạm thời (có giới hạn) để đi vòng.
+     * Kết nối thẳng thất bại: giao mật khẩu TURN tạm thời của riêng phòng này (có giới hạn) để đi
+     * vòng. readyIn > 0 nghĩa là mật khẩu vừa tạo, máy cần chờ ngần ấy giây mới dùng được.
      */
     public function turn(Request $request, string $code, IssueTurnCredentials $issueTurn): JsonResponse
     {
-        return $this->withRoom($request, $code, fn (): JsonResponse => response()->json([
-            'iceServers' => array_merge($this->iceServers(), $issueTurn->handle(hash('sha256', $request->ip().config('app.key')))),
-            'maxRelayBytes' => (int) config('services.transfer.turn_max_bytes'),
-        ]));
+        return $this->withRoom($request, $code, function (TransferRoom $room) use ($request, $issueTurn): JsonResponse {
+            ['iceServers' => $servers, 'readyIn' => $readyIn] = $issueTurn->handle($room, hash('sha256', $request->ip().config('app.key')));
+
+            return response()->json([
+                'iceServers' => array_merge($this->iceServers(), $servers),
+                'readyIn' => $readyIn,
+                'maxRelayBytes' => (int) config('services.transfer.turn_max_bytes'),
+            ]);
+        });
     }
 
     public function destroy(Request $request, string $code, CloseTransferRoom $closeRoom): JsonResponse
@@ -146,6 +153,9 @@ final class TransferRoomController
     private function roomResponse(TransferRoom $room, TransferRole $role, string $token, int $status = 200): JsonResponse
     {
         $joinUrl = route('transfer.show', ['ma' => $room->code]);
+        // Chỉ đọc số liệu đã lưu (lịch cập nhật mỗi phút) để tạo phòng không phải chờ Metered.
+        $turnExhausted = IssueTurnCredentials::enabled() && app(TurnQuota::class)->exhausted();
+        $turnAvailable = IssueTurnCredentials::enabled() && ! $turnExhausted;
 
         return response()->json([
             'code' => $room->code,
@@ -156,7 +166,8 @@ final class TransferRoomController
             'joinUrl' => $joinUrl,
             'qrSvg' => $role === TransferRole::Sender ? $this->qrSvg($joinUrl) : null,
             'iceServers' => $this->iceServers(),
-            'turnAvailable' => IssueTurnCredentials::enabled(),
+            'turnAvailable' => $turnAvailable,
+            'turnNotice' => $turnExhausted ? TransferRoomException::MONTHLY_LIMIT_MESSAGE : null,
             'maxRelayBytes' => (int) config('services.transfer.turn_max_bytes'),
         ], $status);
     }

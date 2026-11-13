@@ -2,11 +2,15 @@
 
 declare(strict_types=1);
 
+use App\Actions\Transfer\TurnQuota;
+use App\Models\TransferTurnCredential;
 use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 /*
- * Máy chủ trung chuyển (Cloudflare TURN) cho gửi file: chỉ cấp khi nối thẳng thất bại, có giới hạn.
+ * Máy chủ trung chuyển (TURN Open Relay của Metered) cho gửi file: mật khẩu tạm thời tạo sẵn,
+ * mỗi phòng một mật khẩu, giới hạn 500 MB mỗi lượt gửi và tắt khi hết hạn mức tháng.
  */
 
 function turnRoom(): array
@@ -14,61 +18,116 @@ function turnRoom(): array
     return test()->postJson(route('transfer.rooms.store'))->assertCreated()->json();
 }
 
-function requestTurn(array $room)
+function requestTurn(array $room, ?string $token = null)
 {
-    return test()->postJson(route('transfer.rooms.turn', $room['code']), [], ['X-Room-Token' => $room['token']]);
+    return test()->postJson(route('transfer.rooms.turn', $room['code']), [], ['X-Room-Token' => $token ?? $room['token']]);
 }
 
-function enableTurn(): void
+/**
+ * @param  array<string, mixed>  $usage
+ */
+function fakeMetered(array $usage = ['usageInGB' => 1.5, 'quotaInGB' => 20, 'overageInGB' => 0]): void
 {
     config([
-        'services.transfer.turn_key_id' => 'key-123',
-        'services.transfer.turn_api_token' => 'secret-token',
+        'services.transfer.metered_app' => 'sotay',
+        'services.transfer.metered_secret_key' => 'secret-key',
         'services.transfer.turn_daily_per_ip' => 2,
-        'services.transfer.turn_monthly_sessions' => 3,
+        'services.transfer.turn_pool_size' => 2,
     ]);
 
-    Http::fake(['rtc.live.cloudflare.com/*' => Http::response(['iceServers' => [
-        ['urls' => ['stun:stun.cloudflare.com:3478', 'stun:stun.cloudflare.com:53']],
-        ['urls' => ['turn:turn.cloudflare.com:3478?transport=udp', 'turn:turn.cloudflare.com:53?transport=udp', 'turns:turn.cloudflare.com:443?transport=tcp'], 'username' => 'u', 'credential' => 'c'],
-    ]])]);
+    $counter = 0;
+    Http::fake([
+        'sotay.metered.live/api/v1/turn/credential?*' => function () use (&$counter) {
+            $counter++;
+
+            return Http::response(['username' => "user-{$counter}", 'password' => "pass-{$counter}", 'expiryInSeconds' => 21600, 'label' => 'gui-file', 'apiKey' => "cred-key-{$counter}"]);
+        },
+        'sotay.metered.live/api/v1/turn/credentials?*' => fn (ClientRequest $request) => Http::response([
+            ['urls' => 'stun:stun.relay.metered.ca:80'],
+            ['urls' => 'turn:standard.relay.metered.ca:80', 'username' => 'u-'.$request['apiKey'], 'credential' => 'c'],
+            ['urls' => 'turns:standard.relay.metered.ca:443?transport=tcp', 'username' => 'u-'.$request['apiKey'], 'credential' => 'c'],
+        ]),
+        'sotay.metered.live/api/v1/turn/current_usage*' => Http::response($usage),
+    ]);
 }
 
-test('TURN is off until the Cloudflare key is configured', function () {
+test('TURN is off until the Metered secret key is configured', function () {
     $room = turnRoom();
-    expect($room['turnAvailable'])->toBeFalse();
+    expect($room['turnAvailable'])->toBeFalse()->and($room['turnNotice'])->toBeNull();
 
     requestTurn($room)->assertStatus(503)->assertJson(['reason' => 'turn_disabled']);
 });
 
-test('a room gets short-lived TURN credentials without the browser-blocked port 53', function () {
-    enableTurn();
-    $room = turnRoom();
-    expect($room['turnAvailable'])->toBeTrue()->and($room['maxRelayBytes'])->toBe(2 * 1024 ** 3);
+test('the scheduler keeps short-lived credentials ready ahead of time', function () {
+    fakeMetered();
 
-    $servers = requestTurn($room)->assertOk()->json('iceServers');
+    $this->artisan('transfer:turn-pool')->assertSuccessful();
 
-    expect($servers)->toBe([
-        ['urls' => ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302']],
-        ['urls' => ['stun:stun.cloudflare.com:3478']],
-        ['urls' => ['turn:turn.cloudflare.com:3478?transport=udp', 'turns:turn.cloudflare.com:443?transport=tcp'], 'username' => 'u', 'credential' => 'c'],
-    ]);
+    expect(TransferTurnCredential::query()->available()->count())->toBe(2);
+    $credential = TransferTurnCredential::query()->first();
+    expect($credential->expires_at->diffInHours(now(), true))->toBeGreaterThan(5.9)
+        ->and($credential->secondsUntilReady())->toBeGreaterThan(100);
 
-    Http::assertSent(fn (ClientRequest $request) => $request->url() === 'https://rtc.live.cloudflare.com/v1/turn/keys/key-123/credentials/generate-ice-servers'
-        && $request->hasHeader('Authorization', 'Bearer secret-token')
-        && $request['ttl'] === 3600);
+    Http::assertSent(fn (ClientRequest $request) => str_starts_with($request->url(), 'https://sotay.metered.live/api/v1/turn/credential?')
+        && str_contains($request->url(), 'secretKey=secret-key')
+        && $request['expiryInSeconds'] === 21600);
+
+    // Đã đủ kho thì không tạo thêm.
+    $this->artisan('transfer:turn-pool')->assertSuccessful();
+    expect(TransferTurnCredential::query()->count())->toBe(2);
 });
 
-test('the secret token never reaches the browser', function () {
-    enableTurn();
+test('each room gets its own ready credential, shared by both devices and counted once', function () {
+    fakeMetered();
+    $this->artisan('transfer:turn-pool');
+    $this->travel(3)->minutes();
+
+    $room = turnRoom();
+    expect($room['turnAvailable'])->toBeTrue()->and($room['maxRelayBytes'])->toBe(500 * 1024 ** 2);
+    $receiver = $this->postJson(route('transfer.rooms.join', $room['code']))->assertOk()->json();
+
+    $first = requestTurn($room)->assertOk()->json();
+    $second = requestTurn($room, $receiver['token'])->assertOk()->json();
+
+    expect($first['readyIn'])->toBe(0)
+        ->and($first['iceServers'])->toBe($second['iceServers'])
+        ->and($first['iceServers'][1])->toBe(['urls' => ['stun:stun.relay.metered.ca:80']])
+        ->and($first['iceServers'][2]['urls'])->toBe(['turn:standard.relay.metered.ca:80']);
+
+    $other = requestTurn(turnRoom())->assertOk()->json();
+    expect($other['iceServers'])->not->toBe($first['iceServers']);
+
+    expect(TransferTurnCredential::query()->whereNotNull('issued_at')->count())->toBe(2);
+});
+
+test('with an empty pool a credential is made on the spot and the browser is told to wait', function () {
+    fakeMetered();
+
+    $response = requestTurn(turnRoom())->assertOk()->json();
+
+    expect($response['readyIn'])->toBeGreaterThan(100)->and($response['iceServers'])->not->toBeEmpty();
+});
+
+test('a credential close to its hard expiry is not handed out', function () {
+    fakeMetered();
+    $this->artisan('transfer:turn-pool');
+    $this->travel(5)->hours();
+
+    $response = requestTurn(turnRoom())->assertOk()->json();
+
+    expect($response['readyIn'])->toBeGreaterThan(100);
+});
+
+test('the secret key never reaches the browser', function () {
+    fakeMetered();
     $room = turnRoom();
 
-    expect(json_encode($room))->not->toContain('secret-token')
-        ->and(requestTurn($room)->getContent())->not->toContain('secret-token');
+    expect(json_encode($room))->not->toContain('secret-key')
+        ->and(requestTurn($room)->getContent())->not->toContain('secret-key');
 });
 
 test('each IP gets a limited number of relayed sessions per day', function () {
-    enableTurn();
+    fakeMetered();
 
     requestTurn(turnRoom())->assertOk();
     requestTurn(turnRoom())->assertOk();
@@ -78,43 +137,65 @@ test('each IP gets a limited number of relayed sessions per day', function () {
     requestTurn(turnRoom())->assertOk();
 });
 
-test('relayed sessions stop for everyone once the monthly budget is used', function () {
-    enableTurn();
-    config(['services.transfer.turn_daily_per_ip' => 100]);
+test('once the monthly quota is used up the page falls back to direct connections only', function () {
+    fakeMetered(['usageInGB' => 19.6, 'quotaInGB' => 20, 'overageInGB' => 0]);
 
-    foreach (range(1, 3) as $ignored) {
-        requestTurn(turnRoom())->assertOk();
-    }
-    requestTurn(turnRoom())->assertStatus(429)->assertJson(['reason' => 'turn_monthly_limit']);
+    $this->artisan('transfer:turn-pool')->assertSuccessful();
+    expect(TransferTurnCredential::query()->count())->toBe(0);
 
-    $this->travel(1)->months();
-    requestTurn(turnRoom())->assertOk();
+    $room = turnRoom();
+    expect($room['turnAvailable'])->toBeFalse()
+        ->and($room['turnNotice'])->toContain('hết dung lượng miễn phí của tháng');
+
+    requestTurn($room)->assertStatus(429)->assertJson(['reason' => 'turn_monthly_limit']);
 });
 
-test('a Cloudflare outage gives a clear message and does not use up a session', function () {
+test('the quota is checked before handing out even when the scheduler has not run', function () {
+    fakeMetered(['usageInGB' => 20, 'quotaInGB' => 20, 'overageInGB' => 0]);
+    $room = turnRoom();
+    expect($room['turnAvailable'])->toBeTrue();
+
+    requestTurn($room)->assertStatus(429)->assertJson(['reason' => 'turn_monthly_limit']);
+    expect(Cache::get(TurnQuota::cacheKey())['exhausted'])->toBeTrue();
+});
+
+test('a Metered outage gives a clear message and does not use up a session', function () {
     config([
-        'services.transfer.turn_key_id' => 'key-123',
-        'services.transfer.turn_api_token' => 'secret-token',
-        'services.transfer.turn_daily_per_ip' => 2,
+        'services.transfer.metered_app' => 'sotay',
+        'services.transfer.metered_secret_key' => 'secret-key',
+        'services.transfer.turn_daily_per_ip' => 1,
     ]);
-    Http::fake(['rtc.live.cloudflare.com/*' => Http::sequence()
-        ->push('oops', 500)
-        ->push('oops', 500)
-        ->push(['iceServers' => [['urls' => ['turn:turn.cloudflare.com:3478'], 'username' => 'u', 'credential' => 'c']]])
-        ->push(['iceServers' => [['urls' => ['turn:turn.cloudflare.com:3478'], 'username' => 'u', 'credential' => 'c']]])]);
+    $down = true;
+    Http::fake(['sotay.metered.live/*' => function (ClientRequest $request) use (&$down) {
+        return match (true) {
+            $down => Http::response('oops', 500),
+            str_contains($request->url(), '/credential?') => Http::response(['username' => 'u', 'password' => 'p', 'apiKey' => 'k']),
+            str_contains($request->url(), '/credentials?') => Http::response([['urls' => 'turn:standard.relay.metered.ca:80', 'username' => 'u', 'credential' => 'p']]),
+            default => Http::response(['usageInGB' => 0, 'quotaInGB' => 20]),
+        };
+    }]);
 
     requestTurn(turnRoom())->assertStatus(503)->assertJson(['reason' => 'turn_unavailable']);
-    requestTurn(turnRoom())->assertStatus(503);
 
-    // Hai lần lỗi không bị tính: vẫn còn đủ 2 lượt trong ngày.
-    requestTurn(turnRoom())->assertOk();
+    $down = false;
     requestTurn(turnRoom())->assertOk();
 });
 
 test('only devices in the room can ask for TURN', function () {
-    enableTurn();
+    fakeMetered();
     $room = turnRoom();
 
-    $this->postJson(route('transfer.rooms.turn', $room['code']), [], ['X-Room-Token' => 'nope'])->assertForbidden();
+    requestTurn($room, 'nope')->assertForbidden();
     Http::assertNothingSent();
+});
+
+test('expired credentials are cleaned up', function () {
+    fakeMetered();
+    $this->artisan('transfer:turn-pool');
+    $this->travel(7)->hours();
+
+    $this->artisan('transfer:turn-pool');
+
+    expect(TransferTurnCredential::query()->expired()->count())->toBe(0)
+        ->and(TransferTurnCredential::query()->count())->toBe(2);
 });
