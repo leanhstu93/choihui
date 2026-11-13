@@ -22,7 +22,7 @@ export const BUFFER_LOW = 1024 * 1024;
 /** Văn bản / link gửi qua kênh tối đa 100 000 ký tự. */
 export const MAX_TEXT = 100000;
 
-const MESSAGE_TYPES = new Set(['hello', 'text', 'offer', 'accept', 'reject', 'withdraw', 'start', 'end', 'ack', 'done', 'cancel', 'bye']);
+const MESSAGE_TYPES = new Set(['hello', 'text', 'offer', 'accept', 'reject', 'withdraw', 'start', 'end', 'ack', 'done', 'cancel', 'bye', 'resume']);
 
 /**
  * Đọc tin điều khiển; trả null nếu không hợp lệ (máy kia gửi rác thì bỏ qua, không làm vỡ trang).

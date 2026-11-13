@@ -73,9 +73,10 @@ export class Signaling {
         this.peerSeen = false;
 
         const tick = async () => {
-            if (! this.running) {
+            if (! this.running || this.inFlight) {
                 return;
             }
+            this.inFlight = true;
 
             try {
                 const data = await request(this.fetcher, `${this.url}/tin?after=${this.after}`, { token: this.token });
@@ -102,26 +103,52 @@ export class Signaling {
                 if (error.reason === 'network' || error.status >= 500) {
                     this.failures++;
                     if (this.failures < this.maxFailures) {
+                        this.inFlight = false;
                         this.schedule(tick, this.interval * Math.min(5, 1 + this.failures));
 
                         return;
                     }
                 }
+                this.inFlight = false;
                 this.running = false;
                 onError(error);
 
                 return;
             }
 
+            this.inFlight = false;
             this.schedule(tick, this.interval);
         };
 
+        this.tick = tick;
         tick();
     }
 
     schedule(tick, delay) {
         if (this.running) {
             this.timer = this.setTimer(tick, delay);
+        }
+    }
+
+    /** Hỏi server lại sau khi đã dừng vì lỗi (vd. mất mạng lúc đang nối thẳng). */
+    restart() {
+        if (! this.running && this.tick) {
+            this.running = true;
+            this.failures = 0;
+            this.inFlight = false;
+            this.tick();
+        }
+    }
+
+    /** Đổi nhịp hỏi server; hỏi ngay một lần nếu nhịp mới nhanh hơn. */
+    setPace(interval) {
+        const faster = interval < this.interval;
+        this.interval = interval;
+
+        if (this.running && faster && this.tick) {
+            this.clearTimer(this.timer);
+            this.timer = null;
+            this.tick();
         }
     }
 

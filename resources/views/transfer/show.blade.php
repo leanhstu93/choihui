@@ -75,16 +75,21 @@
         </section>
 
         {{-- Đã kết nối --}}
-        <section x-show="['connected', 'unstable'].includes(phase)" class="mt-5 space-y-4" style="display: none">
+        <section x-show="['connected', 'unstable', 'reconnecting'].includes(phase)" class="mt-5 space-y-4" style="display: none">
             <div class="flex flex-wrap items-center gap-2 rounded-2xl bg-white p-4 shadow-sm">
                 <span class="h-3 w-3 shrink-0 rounded-full" :class="phase === 'connected' ? 'bg-emerald-500' : 'animate-pulse bg-amber-400'"></span>
                 <div class="min-w-0 flex-1">
-                    <div class="font-semibold" x-text="phase === 'connected' ? `Đã kết nối với ${peer?.name ?? 'máy kia'}` : 'Kết nối chập chờn, đang thử giữ…'"></div>
+                    <div class="font-semibold" x-text="{ connected: `Đã kết nối với ${peer?.name ?? 'máy kia'}`, unstable: 'Kết nối chập chờn, đang thử giữ…', reconnecting: 'Mất kết nối, đang nối lại…' }[phase]"></div>
                     <div class="text-xs text-gray-500"><span x-text="peer?.device ?? ''"></span> · <span x-text="kindLabel"></span></div>
                 </div>
                 <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="kind === 'relay' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'" x-text="kind === 'relay' ? 'Qua trung chuyển' : (kind ? 'Trực tiếp' : '…')"></span>
                 <button type="button" @click="disconnect()" class="rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50">Ngắt</button>
             </div>
+            <p x-show="phase === 'reconnecting'" class="flex items-start gap-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">
+                <span aria-hidden="true">🔄</span>
+                <span>Đừng đóng trang trên cả hai máy. Nối lại được thì file đang dở <b>gửi tiếp từ chỗ dừng</b>, không phải gửi lại từ đầu. Chờ tối đa 2 phút.</span>
+            </p>
+
             {{-- Mã xác minh an toàn: hai màn hình giống nhau là không ai chen vào giữa --}}
             <div x-show="safety" class="rounded-2xl bg-white p-4 shadow-sm">
                 <button type="button" @click="safetyOpen = ! safetyOpen" class="flex w-full items-center gap-3 text-left" :aria-expanded="safetyOpen">

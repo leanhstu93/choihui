@@ -12,6 +12,18 @@ const DIRECT_TIMEOUT = 10000;
 /** Thời gian chờ thêm khi đã đi vòng qua trung chuyển. */
 const RELAY_TIMEOUT = 20000;
 
+/** Chập chờn quá ngần này thì coi như rớt và nối lại. */
+const UNSTABLE_TIMEOUT = 8000;
+
+/** Chờ nối lại tối đa ngần này rồi mới báo mất kết nối hẳn. */
+const RECONNECT_TIMEOUT = 120000;
+
+/** Đang nối lại mà chưa được: máy gửi thử lại với kết nối mới sau ngần này. */
+const RECONNECT_RETRY = 20000;
+
+/** Đã nối: hỏi server ngần này một lần để giữ phòng (dùng khi cần nối lại). */
+const KEEPALIVE_INTERVAL = 15000;
+
 const NO_DIRECT_MESSAGE = 'Không kết nối được hai máy với nhau. Mạng có thể đang chặn kết nối trực tiếp: hãy cho hai máy dùng chung một wifi rồi thử lại.';
 
 /**
@@ -47,11 +59,22 @@ export class TransferSession {
         this.usingRelay = false;
         this.apiBase = apiBase;
         this.kind = null;
+        this.iceServers = room.iceServers ?? [];
+
+        // Nối lại sau khi rớt mạng: mỗi lần tạo kết nối mới tăng gen, tin bắt tay của lần cũ bị bỏ.
+        this.gen = 0;
+        this.everConnected = false;
+        this.reconnecting = false;
+        this.reconnectDeadline = null;
+        this.unstableTimer = null;
+        this.outbox = [];
 
         // Gửi đi
         this.outgoing = new Map();
         this.sendQueue = [];
         this.sending = null;
+        this.paused = null;
+        this.waitingResume = false;
 
         // Nhận về
         this.offers = new Map();
@@ -73,7 +96,13 @@ export class TransferSession {
                 }
                 this.armConnectTimer();
             },
-            onError: (error) => this.fail(error.message),
+            onError: (error) => {
+                // Đang nối thì phòng chỉ để dự phòng: mất phòng không làm hỏng kết nối đang chạy.
+                if (this.channel?.readyState === 'open' && ! this.reconnecting) {
+                    return;
+                }
+                this.reconnecting ? this.giveUp() : this.fail(error.message);
+            },
         });
 
         if (this.room.role === 'receiver') {
@@ -82,23 +111,33 @@ export class TransferSession {
     }
 
     createPeer() {
-        this.pc = new RTCPeerConnection({ iceServers: this.room.iceServers ?? [] });
+        const pc = new RTCPeerConnection({ iceServers: this.iceServers });
+        this.pc = pc;
+        this.pendingCandidates = [];
+        this.remoteDescriptionSet = false;
 
-        this.pc.onicecandidate = ({ candidate }) => {
+        pc.onicecandidate = ({ candidate }) => {
             if (candidate) {
-                this.signaling.send({ type: 'candidate', candidate: candidate.toJSON() }).catch(() => {});
+                this.signal({ type: 'candidate', candidate: candidate.toJSON() }).catch(() => {});
             }
         };
 
-        this.pc.onconnectionstatechange = () => {
-            const state = this.pc.connectionState;
-            if (state === 'failed' && this.channel?.readyState !== 'open' && ! this.usingRelay) {
+        pc.onconnectionstatechange = () => {
+            if (pc !== this.pc) {
+                return;
+            }
+            const state = pc.connectionState;
+            clearTimeout(this.unstableTimer);
+
+            if (state === 'failed' && ! this.everConnected && ! this.usingRelay) {
                 // Chưa từng nối được: thử đi vòng ngay, không chờ hết giờ.
                 this.fallbackToRelay();
             } else if (state === 'failed' || state === 'closed') {
-                this.lost();
+                this.everConnected ? this.reconnect() : this.lost();
             } else if (state === 'disconnected') {
                 this.on.onState('unstable');
+                // Chập chờn quá lâu thì coi như rớt và nối lại.
+                this.unstableTimer = setTimeout(() => this.reconnect(), UNSTABLE_TIMEOUT);
             } else if (state === 'connected' && this.channel?.readyState === 'open') {
                 this.on.onState('connected');
                 this.refreshKind();
@@ -106,23 +145,45 @@ export class TransferSession {
         };
 
         if (this.room.role === 'sender') {
-            this.attachChannel(this.pc.createDataChannel('xfer', { ordered: true }));
+            this.attachChannel(pc.createDataChannel('xfer', { ordered: true }));
         } else {
-            this.pc.ondatachannel = ({ channel }) => this.attachChannel(channel);
+            pc.ondatachannel = ({ channel }) => this.attachChannel(channel);
         }
     }
 
-    async makeOffer() {
+    /** Gửi tin bắt tay kèm số thứ tự kết nối hiện tại. */
+    signal(payload) {
+        return this.signaling.send({ ...payload, gen: this.gen });
+    }
+
+    async makeOffer(options = {}) {
         try {
-            const offer = await this.pc.createOffer();
+            const offer = await this.pc.createOffer(options);
             await this.pc.setLocalDescription(offer);
-            await this.signaling.send({ type: 'description', description: this.pc.localDescription.toJSON() });
+            await this.signal({ type: 'description', description: this.pc.localDescription.toJSON() });
         } catch (error) {
-            this.fail(error.message ?? 'Không tạo được kết nối.');
+            this.reconnecting ? null : this.fail(error.message ?? 'Không tạo được kết nối.');
         }
     }
 
     async handleSignal(payload) {
+        const gen = Number.isSafeInteger(payload.gen) ? payload.gen : 0;
+
+        if (gen < this.gen) {
+            return;
+        }
+        if (gen > this.gen) {
+            // Máy kia đã nối lại trước: dựng kết nối mới theo.
+            this.startReconnect(gen);
+
+            if (this.room.role === 'sender' && payload.type === 'reconnect') {
+                await this.makeOffer();
+            }
+        }
+        if (payload.type === 'reconnect') {
+            return;
+        }
+
         if (payload.type === 'description') {
             await this.pc.setRemoteDescription(payload.description);
             this.remoteDescriptionSet = true;
@@ -134,7 +195,7 @@ export class TransferSession {
             if (payload.description.type === 'offer') {
                 const answer = await this.pc.createAnswer();
                 await this.pc.setLocalDescription(answer);
-                await this.signaling.send({ type: 'description', description: this.pc.localDescription.toJSON() });
+                await this.signal({ type: 'description', description: this.pc.localDescription.toJSON() });
             }
         } else if (payload.type === 'candidate') {
             if (this.remoteDescriptionSet) {
@@ -166,39 +227,192 @@ export class TransferSession {
         clearTimeout(this.connectTimer);
 
         if (! this.room.turnAvailable) {
+            if (this.reconnecting) {
+                // Đang nối lại: cứ chờ đường thẳng tới hạn chót.
+                return;
+            }
             // Hết hạn mức trung chuyển của tháng (turnNotice) hoặc chưa bật: chỉ có kết nối thẳng.
             this.fail(this.room.turnNotice ?? NO_DIRECT_MESSAGE, this.room.turnNotice ? 'turn_monthly_limit' : 'no_direct');
 
             return;
         }
 
-        this.on.onState('relaying');
+        if (! this.reconnecting) {
+            this.on.onState('relaying');
+        }
 
         try {
             const data = await request((...args) => fetch(...args), `${this.apiBase}/${this.room.code}/turn`, { method: 'POST', token: this.room.token });
             this.room.maxRelayBytes = data.maxRelayBytes;
+            this.iceServers = data.iceServers;
             this.pc.setConfiguration({ iceServers: data.iceServers });
 
             if (this.room.role === 'sender') {
-                const offer = await this.pc.createOffer({ iceRestart: true });
-                await this.pc.setLocalDescription(offer);
-                await this.signaling.send({ type: 'description', description: this.pc.localDescription.toJSON() });
+                await this.makeOffer({ iceRestart: true });
             }
         } catch (error) {
             if (error.reason === 'turn_monthly_limit') {
                 this.room.turnAvailable = false;
                 this.room.turnNotice = error.message;
             }
-            this.fail(error.message ?? NO_DIRECT_MESSAGE, error.reason ?? 'relay_failed');
+            if (! this.reconnecting) {
+                this.fail(error.message ?? NO_DIRECT_MESSAGE, error.reason ?? 'relay_failed');
+            }
 
             return;
         }
 
-        this.connectTimer = setTimeout(() => {
-            if (this.channel?.readyState !== 'open') {
-                this.fail(NO_DIRECT_MESSAGE, 'connect_timeout');
+        if (! this.reconnecting) {
+            this.connectTimer = setTimeout(() => {
+                if (this.channel?.readyState !== 'open') {
+                    this.fail(NO_DIRECT_MESSAGE, 'connect_timeout');
+                }
+            }, RELAY_TIMEOUT);
+        }
+    }
+
+    // ----- Nối lại khi rớt mạng -----
+
+    /**
+     * Phát hiện rớt mạng ở máy này: dựng kết nối mới. Máy gửi chủ động bắt tay lại; máy nhận báo
+     * qua server để máy gửi biết (có khi chỉ một bên thấy rớt).
+     */
+    reconnect() {
+        if (this.closed || this.reconnecting) {
+            return;
+        }
+        this.startReconnect(this.gen + 1);
+
+        if (this.room.role === 'sender') {
+            this.makeOffer();
+        } else {
+            this.signal({ type: 'reconnect' }).catch(() => {});
+        }
+    }
+
+    startReconnect(gen) {
+        const first = ! this.reconnecting;
+        this.reconnecting = true;
+        this.gen = gen;
+        clearTimeout(this.unstableTimer);
+        clearTimeout(this.connectTimer);
+        clearInterval(this.kindTimer);
+        this.teardownPeer();
+
+        if (first) {
+            this.on.onState('reconnecting');
+            this.pauseTransfers();
+            this.reconnectDeadline = setTimeout(() => this.giveUp(), RECONNECT_TIMEOUT);
+
+            // Tin bắt tay có thể rơi: máy gửi thử lại với kết nối mới tới khi nối được.
+            if (this.room.role === 'sender') {
+                this.retryTimer = setInterval(() => {
+                    if (this.reconnecting && this.channel?.readyState !== 'open') {
+                        this.startReconnect(this.gen + 1);
+                        this.makeOffer();
+                    }
+                }, RECONNECT_RETRY);
             }
-        }, RELAY_TIMEOUT);
+        }
+
+        // Hỏi server nhanh lại để nhận tin bắt tay mới.
+        this.signaling.restart();
+        this.signaling.setPace(1000);
+        this.createPeer();
+
+        // Đường thẳng không lên thì thử trung chuyển (nếu trước đó chưa dùng).
+        this.connectTimer = setTimeout(() => {
+            if (this.channel?.readyState !== 'open' && ! this.usingRelay) {
+                this.fallbackToRelay();
+            }
+        }, DIRECT_TIMEOUT);
+    }
+
+    teardownPeer() {
+        const { pc, channel } = this;
+        this.pc = null;
+        this.channel = null;
+        if (channel) {
+            channel.onopen = channel.onclose = channel.onmessage = null;
+        }
+        if (pc) {
+            pc.onicecandidate = pc.onconnectionstatechange = pc.ondatachannel = null;
+            pc.close();
+        }
+    }
+
+    /** Dừng file đang gửi/nhận nhưng giữ nguyên tiến độ để gửi tiếp. */
+    pauseTransfers() {
+        if (this.sending) {
+            this.paused = { fid: this.sending.fid, outgoing: this.sending };
+            this.sending.pause();
+        }
+        this.waitingResume = true;
+
+        for (const [fid, entry] of this.outgoing) {
+            if (['sending', 'queued'].includes(entry.status)) {
+                this.on.onFile(fid, { status: 'paused' });
+            }
+        }
+        if (this.receiving) {
+            this.on.onFile(this.receiving.fid, { status: 'paused' });
+        }
+    }
+
+    /** Nối lại xong: bên nhận báo đã ghi tới đâu để bên gửi gửi tiếp từ đó. */
+    async resumeAfterReconnect() {
+        clearTimeout(this.reconnectDeadline);
+        clearInterval(this.retryTimer);
+        this.reconnecting = false;
+        this.waitingResume = true;
+        this.dropping = false;
+
+        let receiving = null;
+        if (this.receiving) {
+            receiving = { fid: this.receiving.fid, offset: await this.receiving.incoming.settle() };
+            this.on.onFile(this.receiving.fid, { status: 'receiving' });
+        }
+        this.sendControl({ t: 'resume', receiving });
+
+        for (const message of this.outbox.splice(0)) {
+            this.sendControl(message);
+        }
+    }
+
+    /** Máy kia báo đã ghi tới đâu: xếp file đang dở lên đầu hàng đợi, gửi tiếp từ đúng byte đó. */
+    handleResume(message) {
+        const receiving = message.receiving && typeof message.receiving.fid === 'string' && Number.isSafeInteger(message.receiving.offset) ? message.receiving : null;
+        const paused = this.paused;
+        this.paused = null;
+
+        if (paused) {
+            const entry = this.outgoing.get(paused.fid);
+            if (entry && ! ['cancelled', 'failed', 'done'].includes(entry.status)) {
+                const offset = receiving?.fid === paused.fid ? receiving.offset : 0;
+                entry.resume = { outgoing: paused.outgoing, offset };
+                entry.status = 'queued';
+                this.sendQueue.unshift(paused.fid);
+            }
+        } else if (receiving) {
+            // Bên gửi đã gửi xong nhưng tin "end" bị rơi: gửi lại.
+            const entry = this.outgoing.get(receiving.fid);
+            if (entry?.status === 'done' && entry.sha256) {
+                this.sendControl({ t: 'start', fid: receiving.fid, size: entry.file.size, offset: entry.file.size });
+                this.sendControl({ t: 'end', fid: receiving.fid, sha256: entry.sha256 });
+            }
+        }
+
+        this.waitingResume = false;
+        for (const fid of this.sendQueue) {
+            this.on.onFile(fid, { status: 'queued' });
+        }
+        this.pumpQueue();
+    }
+
+    /** Hết hạn chờ nối lại: dừng hẳn. */
+    giveUp() {
+        this.reconnecting = false;
+        this.lost('Mất kết nối với máy kia và không nối lại được. Kiểm tra mạng trên cả hai máy rồi tạo mã mới.');
     }
 
     attachChannel(channel) {
@@ -207,16 +421,27 @@ export class TransferSession {
 
         channel.onopen = () => {
             clearTimeout(this.connectTimer);
+            const isReconnect = this.everConnected;
+            this.everConnected = true;
             this.on.onState('connected');
-            // Đã nối thẳng: không cần server nữa. Máy tạo phòng xóa phòng, máy kia chỉ thôi hỏi.
-            this.room.role === 'sender' ? this.signaling.close() : this.signaling.stop();
+            // Đã nối: chỉ hỏi server thưa thớt để giữ phòng, dùng khi cần nối lại.
+            this.signaling.setPace(KEEPALIVE_INTERVAL);
             this.sendControl({ t: 'hello', name: this.me.name, device: this.me.device });
             this.refreshKind();
+            clearInterval(this.kindTimer);
             this.kindTimer = setInterval(() => this.refreshKind(), 5000);
             this.showSafetyCode();
+
+            if (isReconnect) {
+                this.resumeAfterReconnect();
+            }
         };
 
-        channel.onclose = () => this.lost();
+        channel.onclose = () => {
+            if (channel === this.channel) {
+                this.reconnect();
+            }
+        };
         channel.onmessage = ({ data }) => (typeof data === 'string' ? this.handleControl(data) : this.handleChunk(data));
     }
 
@@ -257,6 +482,9 @@ export class TransferSession {
     sendControl(message) {
         if (this.channel?.readyState === 'open') {
             this.channel.send(JSON.stringify(message));
+        } else if (this.reconnecting) {
+            // Đang nối lại: giữ tin (đồng ý nhận, hủy, văn bản…) gửi khi nối xong.
+            this.outbox.push(message);
         }
     }
 
@@ -315,34 +543,50 @@ export class TransferSession {
     }
 
     async pumpQueue() {
-        if (this.sending || this.sendQueue.length === 0) {
+        if (this.sending || this.sendQueue.length === 0 || this.reconnecting || this.waitingResume || this.channel?.readyState !== 'open') {
             return;
         }
 
         const fid = this.sendQueue.shift();
         const entry = this.outgoing.get(fid);
+        const resume = entry.resume ?? null;
+        entry.resume = null;
         entry.status = 'sending';
         entry.started = true;
         this.on.onFile(fid, { status: 'sending' });
 
-        const outgoing = new OutgoingFile({
+        let outgoing = resume?.outgoing;
+        let offset = resume?.offset ?? 0;
+        if (outgoing && ! outgoing.canResumeAt(offset)) {
+            // Không lùi được đúng chỗ (hiếm): gửi lại từ đầu, bên nhận sẽ báo lỗi nếu đã ghi dở.
+            offset = 0;
+        }
+        outgoing ??= new OutgoingFile({
             file: entry.file,
             fid,
             channel: this.channel,
             chunkSize: this.maxChunk,
             onProgress: (done) => this.on.onFile(fid, { done }),
         });
+        outgoing.chunkSize = this.maxChunk;
         this.sending = outgoing;
 
         try {
-            const finished = await outgoing.run();
-            if (finished) {
+            const result = await outgoing.run(this.channel, offset);
+            if (result === true) {
                 entry.status = 'done';
+                entry.sha256 = outgoing.sha256;
                 this.on.onFile(fid, { status: 'done', done: entry.file.size });
             }
         } catch {
-            entry.status = 'failed';
-            this.on.onFile(fid, { status: 'failed', note: 'Mất kết nối khi đang gửi' });
+            if (! this.reconnecting && ! this.closed) {
+                entry.status = 'failed';
+                this.on.onFile(fid, { status: 'failed', note: 'Mất kết nối khi đang gửi' });
+            } else if (this.reconnecting && ! this.paused) {
+                // Kênh đóng trước khi kịp tạm dừng: vẫn giữ để gửi tiếp.
+                this.paused = { fid, outgoing };
+                this.on.onFile(fid, { status: 'paused' });
+            }
         } finally {
             this.sending = null;
             this.pumpQueue();
@@ -402,11 +646,33 @@ export class TransferSession {
 
     startReceiving(message) {
         const accepted = this.accepted.get(message.fid);
+        const offset = Number.isSafeInteger(message.offset) ? message.offset : 0;
 
         if (! accepted || accepted.finished || message.size !== accepted.size) {
             // Không đồng ý file này: bỏ mọi mảnh tới khi có file khác.
             this.dropping = true;
             this.receiving = null;
+
+            return;
+        }
+
+        if (this.receiving?.fid === message.fid) {
+            // Gửi tiếp sau khi nối lại: phải đúng chỗ đã ghi.
+            if (offset !== this.receiving.incoming.written) {
+                this.dropping = true;
+                this.cancelIncoming(message.fid);
+                this.on.onFile(message.fid, { status: 'failed', note: 'Không gửi tiếp được đúng chỗ, hãy gửi lại' });
+
+                return;
+            }
+            this.dropping = false;
+            this.on.onFile(message.fid, { status: 'receiving' });
+
+            return;
+        }
+
+        if (offset !== 0) {
+            this.dropping = true;
 
             return;
         }
@@ -545,6 +811,9 @@ export class TransferSession {
             case 'bye':
                 this.lost('Máy kia đã thoát.');
                 break;
+            case 'resume':
+                this.handleResume(message);
+                break;
             default:
                 break;
         }
@@ -576,7 +845,7 @@ export class TransferSession {
     // ----- Kết thúc -----
 
     get busy() {
-        return Boolean(this.sending || this.receiving || this.sendQueue.length);
+        return Boolean(this.sending || this.receiving || this.sendQueue.length || this.paused || this.reconnecting);
     }
 
     lost(message = 'Mất kết nối với máy kia.') {
@@ -585,13 +854,16 @@ export class TransferSession {
         }
         this.closed = true;
         clearTimeout(this.connectTimer);
+        clearTimeout(this.reconnectDeadline);
+        clearInterval(this.retryTimer);
+        clearTimeout(this.unstableTimer);
         clearInterval(this.kindTimer);
-        this.signaling.stop();
+        this.signaling.close();
         this.sending?.cancel();
         this.receiving?.incoming.abort();
 
         for (const [fid, entry] of this.outgoing) {
-            if (['waiting', 'queued', 'sending'].includes(entry.status)) {
+            if (['waiting', 'queued', 'sending', 'paused'].includes(entry.status)) {
                 entry.status = 'failed';
                 this.on.onFile(fid, { status: 'failed', note: 'Mất kết nối' });
             }
@@ -604,7 +876,7 @@ export class TransferSession {
         }
 
         this.on.onState('disconnected', message);
-        this.pc?.close();
+        this.teardownPeer();
     }
 
     fail(message, reason = 'error') {
@@ -613,6 +885,8 @@ export class TransferSession {
         }
         this.closed = true;
         clearTimeout(this.connectTimer);
+        clearTimeout(this.reconnectDeadline);
+        clearInterval(this.retryTimer);
         this.signaling.close();
         this.pc?.close();
         this.on.onState('error', message, reason);

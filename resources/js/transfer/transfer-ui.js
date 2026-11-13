@@ -25,6 +25,7 @@ const STATUS_LABELS = {
     queued: 'Đang chờ lượt',
     sending: 'Đang gửi',
     receiving: 'Đang nhận',
+    paused: 'Tạm dừng, sẽ gửi tiếp khi nối lại',
     rejected: 'Bị từ chối',
     cancelled: 'Đã hủy',
     failed: 'Lỗi',
@@ -92,6 +93,8 @@ export function fileTransfer(config) {
             }
 
             setInterval(() => this.flush(), 300);
+            // Đóng trang: báo máy kia để nó không ngồi chờ nối lại.
+            window.addEventListener('pagehide', () => session?.sendControl({ t: 'bye' }));
             window.addEventListener('beforeunload', (event) => {
                 if (session?.busy) {
                     event.preventDefault();
@@ -376,7 +379,7 @@ export function fileTransfer(config) {
                 live.get(fid).done = done;
                 entry.done = done;
             }
-            if (! ['sending', 'receiving', 'queued', 'waiting'].includes(entry.status)) {
+            if (! ['sending', 'receiving', 'queued', 'waiting', 'paused'].includes(entry.status)) {
                 entry.speedText = '';
                 entry.etaText = '';
                 this.updateWakeLock();
@@ -412,7 +415,7 @@ export function fileTransfer(config) {
         },
 
         isActive(entry) {
-            return ['waiting', 'queued', 'sending', 'receiving'].includes(entry.status);
+            return ['waiting', 'queued', 'sending', 'receiving', 'paused'].includes(entry.status);
         },
 
         formatBytes,

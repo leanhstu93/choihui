@@ -123,6 +123,62 @@ describe('sending a file end to end', () => {
         expect((await incoming.finish(endMessage.sha256)).verified).toBe(false);
     });
 
+    it('resumes from the receiver offset after the connection drops, with a matching hash', async () => {
+        const { bytes, file } = randomFile(2 * 1024 * 1024 + 777);
+        const sink = new MemorySink('resume.bin');
+        let incoming = null;
+        let outgoing = null;
+        let endMessage = null;
+        let starts = [];
+        let firstDead = false;
+
+        const receive = (data) => {
+            if (typeof data === 'string') {
+                const message = parseMessage(data);
+                if (message.t === 'start') {
+                    starts.push(message.offset);
+                    incoming ??= new IncomingFile({ size: message.size, sink, ackEvery: 64 * 1024, onAck: (written) => setTimeout(() => outgoing.ack(written), 0) });
+                }
+                if (message.t === 'end') {
+                    endMessage = message;
+                }
+            } else {
+                incoming.push(data);
+            }
+        };
+
+        // Kênh 1 rớt sau khoảng 40%: những gì đang trên đường bị mất.
+        let delivered = 0;
+        const first = new FakeChannel((data) => {
+            if (firstDead) {
+                return;
+            }
+            receive(data);
+            delivered += typeof data === 'string' ? 0 : data.byteLength;
+            if (delivered > 0.4 * bytes.length) {
+                firstDead = true;
+                outgoing.pause();
+                first.close();
+            }
+        });
+
+        outgoing = new OutgoingFile({ file, fid: 'f1', channel: first, chunkSize: 16 * 1024, window: 256 * 1024 });
+        expect(await outgoing.run(first, 0)).toBe('paused');
+
+        const offset = await incoming.settle();
+        expect(offset).toBeGreaterThan(0);
+        expect(outgoing.canResumeAt(offset)).toBe(true);
+
+        const second = new FakeChannel(receive);
+        expect(await outgoing.run(second, offset)).toBe(true);
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        const result = await incoming.finish(endMessage.sha256);
+
+        expect(starts).toEqual([0, offset]);
+        expect(result.verified).toBe(true);
+        expect(new Uint8Array(await result.file.arrayBuffer())).toEqual(bytes);
+    });
+
     it('stops sending when cancelled mid-way', async () => {
         const { file } = randomFile(2 * 1024 * 1024);
         let chunks = 0;

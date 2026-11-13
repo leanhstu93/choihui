@@ -127,6 +127,13 @@ export class IncomingFile {
         });
     }
 
+    /** Chờ ghi hết những gì đã nhận; trả về số byte đã ghi (để bên gửi gửi tiếp từ đó). */
+    async settle() {
+        await this.chain;
+
+        return this.written;
+    }
+
     /**
      * Chờ ghi hết rồi đóng sink; lỗi nếu thiếu byte. Trả về kết quả của sink kèm verified: true/false
      * khi bên gửi có gửi mã SHA-256, null nếu không (máy gửi bản cũ).
