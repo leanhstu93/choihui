@@ -2,6 +2,7 @@
     $tabs = [
         ['route' => 'admin.dashboard', 'active' => ['admin.dashboard'], 'label' => 'Tổng quan'],
         ['route' => 'admin.users.index', 'active' => ['admin.users.*', 'admin.groups.*'], 'label' => 'Tài khoản'],
+        ['route' => 'admin.holidays', 'active' => ['admin.holidays'], 'label' => 'Lịch nghỉ lễ'],
         ['route' => 'admin.logs', 'active' => ['admin.logs'], 'label' => 'Nhật ký'],
     ];
 @endphp

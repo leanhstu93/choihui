@@ -16,3 +16,9 @@ Schedule::command('family:send-reminders')
     ->dailyAt('07:00')
     ->timezone('Asia/Ho_Chi_Minh')
     ->withoutOverlapping();
+
+Schedule::command('holidays:remind-admin')
+    ->mondays()
+    ->at('08:00')
+    ->timezone('Asia/Ho_Chi_Minh')
+    ->withoutOverlapping();

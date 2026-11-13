@@ -20,19 +20,34 @@ final class YearCalendar
 
     public const MAX_YEAR = 2100;
 
+    public function __construct(private HolidaySchedule $holidaySchedule) {}
+
     public static function supports(int $year): bool
     {
         return $year >= self::MIN_YEAR && $year <= self::MAX_YEAR;
     }
 
     /**
-     * months[m - 1][d - 1] là LunarDayInfo::toCompact() của ngày d/m.
+     * months[m - 1][d - 1] là LunarDayInfo::toCompact() của ngày d/m; breaks là các đợt nghỉ lễ chạm vào
+     * năm này (chính thức hoặc dự kiến, không lưu đệm để lịch quản trị nhập hiện ngay).
      *
-     * @return array{year: int, months: list<list<array{int, int, int, int, int, int, int, int, int, int, int, int}>>, yearNames: array<int, string>, holidays: list<array{date: string, name: string, icon: string, dayOff: bool, lunar: ?string, about: string}>}
+     * @return array{year: int, months: list<list<array{int, int, int, int, int, int, int, int, int, int, int, int}>>, yearNames: array<int, string>, holidays: list<array{date: string, name: string, icon: string, dayOff: bool, lunar: ?string, about: string}>, breaks: list<array<string, mixed>>}
      */
     public function forYear(int $year): array
     {
-        return Cache::remember("calendar:year:v2:{$year}", now()->addDays(30), function () use ($year): array {
+        return $this->cachedYear($year) + [
+            'breaks' => array_map(HolidaySchedule::toArray(...), $this->holidaySchedule->overlapping($year)),
+        ];
+    }
+
+    /**
+     * Phần không đổi của năm (ngày âm, ngày lễ), lưu đệm.
+     *
+     * @return array{year: int, months: list<list<array{int, int, int, int, int, int, int, int, int, int, int, int}>>, yearNames: array<int, string>, holidays: list<array{date: string, name: string, icon: string, dayOff: bool, lunar: ?string, about: string}>}
+     */
+    private function cachedYear(int $year): array
+    {
+        return Cache::remember("calendar:year:v3:{$year}", now()->addDays(30), function () use ($year): array {
             $months = [];
             $yearNames = [];
 

@@ -56,13 +56,14 @@
                     <button type="button" x-show="cell.day" @click="select(cell.iso)" :aria-label="cell.label" :aria-pressed="cell.iso === selected"
                         :class="[
                             cell.iso === selected ? 'ring-2 ring-emerald-600' : (cell.iso === today ? 'ring-2 ring-amber-400' : ''),
-                            cell.dayOff ? 'bg-rose-100 hover:bg-rose-200' : (cell.holiday ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-gray-100'),
+                            cell.dayOff ? 'bg-rose-100 hover:bg-rose-200' : (cell.makeUp ? 'bg-gray-200 hover:bg-gray-300' : (cell.holiday ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-gray-100')),
                         ]"
                         class="relative flex aspect-square w-full flex-col items-center justify-center rounded-xl transition sm:aspect-[5/4]">
                         <span class="text-base font-semibold sm:text-lg" :class="cell.dayOff || cell.sunday ? 'text-rose-600' : 'text-gray-900'" x-text="cell.day"></span>
                         <span class="text-[10px] leading-none sm:text-xs" :class="cell.lunarDay === 1 || cell.lunarDay === 15 ? 'font-bold text-rose-600' : 'text-gray-400'" x-text="cell.lunarText"></span>
-                        <span x-show="cell.term" class="mt-0.5 hidden max-w-full truncate px-0.5 text-[10px] leading-none text-sky-700 sm:block" x-text="cell.term"></span>
-                        <span x-show="cell.holiday" class="absolute right-1 top-1 h-1.5 w-1.5 rounded-full" :class="cell.dayOff ? 'bg-rose-500' : 'bg-amber-500'"></span>
+                        <span x-show="cell.term && ! cell.makeUp" class="mt-0.5 hidden max-w-full truncate px-0.5 text-[10px] leading-none text-sky-700 sm:block" x-text="cell.term"></span>
+                        <span x-show="cell.makeUp" class="mt-0.5 text-[9px] font-semibold leading-none text-gray-700 sm:text-[10px]">Làm bù</span>
+                        <span x-show="cell.holiday" class="absolute right-1 top-1 h-1.5 w-1.5 rounded-full" :class="cell.holidayOff ? 'bg-rose-500' : 'bg-amber-500'"></span>
                         <span x-show="showGoodDays && cell.good" class="absolute left-1 top-1 h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
                     </button>
                 </div>
@@ -70,8 +71,9 @@
         </div>
 
         <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500">
-            <span><span class="mr-1 inline-block h-2 w-2 rounded-full bg-rose-500"></span>Nghỉ lễ</span>
-            <span><span class="mr-1 inline-block h-2 w-2 rounded-full bg-amber-500"></span>Ngày lễ khác</span>
+            <span><span class="mr-1 inline-block h-3 w-3 rounded bg-rose-100 align-middle"></span>Được nghỉ làm</span>
+            <span><span class="mr-1 inline-block h-3 w-3 rounded bg-gray-200 align-middle"></span>Đi làm bù</span>
+            <span><span class="mr-1 inline-block h-2 w-2 rounded-full bg-amber-500"></span>Ngày lễ không nghỉ</span>
             <span>Số nhỏ là ngày âm, <b class="text-rose-600">đỏ</b> là mùng 1 và rằm</span>
             <button type="button" @click="showGoodDays = ! showGoodDays" :aria-pressed="showGoodDays" :class="showGoodDays ? 'bg-emerald-700 text-white' : 'bg-gray-100 text-gray-700'" class="rounded-full px-3 py-1 font-semibold">
                 <span class="mr-1 inline-block h-2 w-2 rounded-full" :class="showGoodDays ? 'bg-white' : 'bg-emerald-500'"></span>Ngày hoàng đạo
@@ -90,6 +92,12 @@
         <div class="px-5 pt-4 text-center">
             <div class="text-7xl font-bold leading-none text-red-600 sm:text-8xl" x-text="sel.day"></div>
             <div class="mt-2 text-lg font-semibold" x-text="sel.weekday"></div>
+            <div class="mt-3 inline-flex flex-wrap items-center justify-center gap-2 rounded-2xl px-4 py-2 text-sm font-semibold"
+                :class="{ off: 'bg-rose-100 text-rose-800', makeup: 'bg-gray-200 text-gray-800', weekend: 'bg-sky-50 text-sky-800', work: 'bg-gray-100 text-gray-700' }[sel.work.type]">
+                <span aria-hidden="true" x-text="{ off: '🏖️', makeup: '💼', weekend: '🛋️', work: '💼' }[sel.work.type]"></span>
+                <span x-text="sel.work.text"></span>
+                <span x-show="sel.work.break" class="rounded-full bg-white/70 px-2 py-0.5 text-xs" x-text="sel.work.break?.official ? 'Chính thức' : 'Dự kiến'"></span>
+            </div>
         </div>
 
         <div class="mx-4 mt-4 flex gap-4 rounded-2xl bg-rose-50 p-4">
@@ -123,11 +131,11 @@
             </div>
 
             <template x-for="holiday in sel.holidays" :key="holiday.name">
-                <div class="rounded-2xl p-3" :class="holiday.dayOff ? 'bg-rose-50' : 'bg-amber-50'">
-                    <div class="flex items-center gap-2 font-semibold" :class="holiday.dayOff ? 'text-rose-700' : 'text-amber-800'">
+                <div class="rounded-2xl p-3" :class="breakOn(holiday.date) ? 'bg-rose-50' : 'bg-amber-50'">
+                    <div class="flex items-center gap-2 font-semibold" :class="breakOn(holiday.date) ? 'text-rose-700' : 'text-amber-800'">
                         <span aria-hidden="true" x-text="holiday.icon"></span>
                         <span x-text="holiday.name"></span>
-                        <span x-show="holiday.dayOff" class="rounded-full bg-rose-100 px-2 py-0.5 text-xs">Nghỉ lễ</span>
+                        <span x-show="breakOn(holiday.date)" class="rounded-full bg-rose-100 px-2 py-0.5 text-xs">Nghỉ làm</span>
                     </div>
                     <p class="mt-1 text-sm text-gray-700" x-text="holiday.about"></p>
                     <a :href="`${dataUrl}/${sel.year}.ics?ngay=${sel.iso}`" class="mt-2 inline-block text-sm font-semibold text-emerald-700 hover:underline">📅 Lưu vào lịch điện thoại</a>
@@ -147,18 +155,43 @@
         <div class="flex flex-wrap items-center justify-between gap-2">
             <h3 class="whitespace-nowrap font-bold">Ngày lễ</h3>
             <div class="flex gap-1 rounded-full bg-gray-100 p-1 text-xs font-semibold">
-                <template x-for="[key, label] in [['next', 'Sắp tới'], ['month', `Tháng ${month + 1}`], ['year', `Năm ${year}`]]" :key="key">
+                <template x-for="[key, label] in [['next', 'Sắp tới'], ['month', `Tháng ${month + 1}`], ['year', `Năm ${year}`], ['breaks', 'Lịch nghỉ']]" :key="key">
                     <button type="button" @click="listMode = key" :class="listMode === key ? 'bg-white shadow' : 'text-gray-500'" class="whitespace-nowrap rounded-full px-2.5 py-1" x-text="label"></button>
                 </template>
             </div>
         </div>
-        <ul class="mt-3 max-h-[28rem] divide-y divide-gray-100 overflow-y-auto">
+        {{-- Các đợt nghỉ lễ của năm --}}
+        <div x-show="listMode === 'breaks'" class="mt-3" style="display: none">
+            <ul class="divide-y divide-gray-100">
+                <template x-for="item in breakList" :key="item.kind + item.start">
+                    <li>
+                        <button type="button" @click="select(item.start)" class="w-full py-3 text-left hover:bg-gray-50" :class="item.past && 'opacity-50'">
+                            <span class="flex flex-wrap items-center gap-2">
+                                <span class="text-sm font-semibold" x-text="item.name"></span>
+                                <span class="rounded-full px-2 py-0.5 text-xs font-semibold" :class="item.official ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'" x-text="item.official ? 'Chính thức' : 'Dự kiến'"></span>
+                                <span x-show="item.badge" class="ml-auto rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800" x-text="item.badge"></span>
+                            </span>
+                            <span class="mt-0.5 block text-sm text-gray-700"><span x-text="item.range"></span> · <b x-text="`${item.length} ngày`"></b></span>
+                            <span x-show="item.extra" class="block text-xs text-gray-500" x-text="item.extra"></span>
+                            <span x-show="item.makeUp" class="block text-xs font-semibold text-gray-700" x-text="item.makeUp"></span>
+                            <span x-show="item.source" class="block text-xs text-gray-400" x-text="item.source"></span>
+                        </button>
+                    </li>
+                </template>
+            </ul>
+            <p class="mt-2 text-xs text-gray-500">Theo lịch cán bộ, công chức (nghỉ thứ Bảy, Chủ nhật). <i>Dự kiến</i> là app tự tính theo Bộ luật Lao động, sẽ đổi khi có thông báo chính thức. Công ty có thể có lịch riêng.</p>
+        </div>
+
+        <ul x-show="listMode !== 'breaks'" class="mt-3 max-h-[28rem] divide-y divide-gray-100 overflow-y-auto">
             <template x-for="holiday in holidayList" :key="holiday.date + holiday.name">
                 <li>
                     <button type="button" @click="select(holiday.date)" class="flex w-full items-center gap-3 py-2.5 text-left hover:bg-gray-50" :class="holiday.past && 'opacity-50'">
-                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg" :class="holiday.dayOff ? 'bg-rose-100' : 'bg-amber-50'" aria-hidden="true" x-text="holiday.icon"></span>
+                        <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg" :class="holiday.off ? 'bg-rose-100' : 'bg-amber-50'" aria-hidden="true" x-text="holiday.icon"></span>
                         <span class="min-w-0 flex-1">
-                            <span class="block truncate text-sm font-semibold" x-text="holiday.name"></span>
+                            <span class="flex items-center gap-1.5">
+                                <span class="truncate text-sm font-semibold" x-text="holiday.name"></span>
+                                <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" :class="holiday.off ? 'bg-rose-100 text-rose-700' : 'bg-gray-100 text-gray-500'" x-text="holiday.off ? 'Nghỉ làm' : 'Không nghỉ'"></span>
+                            </span>
                             <span class="block text-xs text-gray-500" x-text="holiday.when"></span>
                         </span>
                         <span x-show="holiday.badge" class="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold" :class="holiday.daysLeft === 0 ? 'bg-amber-400 text-amber-950' : 'bg-emerald-100 text-emerald-800'" x-text="holiday.badge"></span>
@@ -167,7 +200,7 @@
             </template>
             <li x-show="holidayList.length === 0" class="py-6 text-center text-sm text-gray-500">Không có ngày lễ nào.</li>
         </ul>
-        <a :href="`${dataUrl}/${year}.ics`" class="mt-3 inline-block text-sm font-semibold text-emerald-700 hover:underline">📅 Lưu tất cả ngày lễ <span x-text="year"></span> vào lịch điện thoại</a>
+        <a x-show="listMode !== 'breaks'" :href="`${dataUrl}/${year}.ics`" class="mt-3 inline-block text-sm font-semibold text-emerald-700 hover:underline">📅 Lưu tất cả ngày lễ <span x-text="year"></span> vào lịch điện thoại</a>
     </div>
 
     {{-- Đổi ngày âm dương --}}
@@ -264,6 +297,7 @@
                     data.months[this.month].forEach(([lunarDay, lunarMonth, leap, , , , , , term, termStart, star], i) => {
                         const iso = this.iso(this.year, this.month, i + 1);
                         const holidays = this.holidaysOn(iso);
+                        const work = this.workStatus(iso);
                         cells.push({
                             key: iso, iso, day: i + 1, lunarDay,
                             lunarText: lunarDay === 1 ? `${lunarDay}/${lunarMonth}${leap ? 'N' : ''}` : String(lunarDay),
@@ -271,8 +305,10 @@
                             good: this.dict.stars[star][1],
                             sunday: (blanks + i) % 7 === 6,
                             holiday: holidays.length > 0,
-                            dayOff: holidays.some((holiday) => holiday.dayOff),
-                            label: `Ngày ${i + 1}, âm lịch ${lunarDay}/${lunarMonth}${holidays.map((holiday) => ', ' + holiday.name).join('')}`,
+                            dayOff: work.type === 'off',
+                            holidayOff: holidays.length > 0 && work.type === 'off',
+                            makeUp: work.type === 'makeup',
+                            label: `Ngày ${i + 1}, âm lịch ${lunarDay}/${lunarMonth}${holidays.map((holiday) => ', ' + holiday.name).join('')}, ${work.text}`,
                         });
                     });
 
@@ -296,7 +332,7 @@
                 get sel() {
                     const [year, month, day] = this.selected.split('-').map(Number);
                     const weekday = this.weekdays[this.parse(this.selected).getUTCDay()];
-                    const base = { iso: this.selected, year, month, day, weekday, isToday: this.selected === this.today, url: `${this.pageUrl}/${this.selected}` };
+                    const base = { iso: this.selected, year, month, day, weekday, isToday: this.selected === this.today, url: `${this.pageUrl}/${this.selected}`, work: this.workStatus(this.selected) };
                     const data = this.dayData(this.selected);
 
                     if (! data) {
@@ -347,7 +383,7 @@
 
                         const weekday = this.weekdays[this.parse(holiday.date).getUTCDay()];
 
-                        return { ...holiday, daysLeft, badge, past: daysLeft < 0, when: `${weekday}, ${day}/${month}/${year}${holiday.lunar ? ' · ' + holiday.lunar : ''}` };
+                        return { ...holiday, daysLeft, badge, off: Boolean(this.breakOn(holiday.date)), past: daysLeft < 0, when: `${weekday}, ${day}/${month}/${year}${holiday.lunar ? ' · ' + holiday.lunar : ''}` };
                     });
                 },
                 get convLeapMonth() {
@@ -403,6 +439,69 @@
                         this.fetchYear(this.convLunar.year);
                         this.fetchYear(this.convLunar.year + 1);
                     }
+                },
+                get allBreaks() {
+                    const seen = new Set();
+
+                    return Object.values(this.years).flatMap((data) => data.breaks ?? []).filter((item) => {
+                        const key = `${item.kind}-${item.year}`;
+                        if (seen.has(key)) {
+                            return false;
+                        }
+                        seen.add(key);
+
+                        return true;
+                    });
+                },
+                breakOn(iso) {
+                    return this.allBreaks.find((item) => item.days[iso]) ?? null;
+                },
+                workStatus(iso) {
+                    const item = this.breakOn(iso);
+                    const labels = { le: 'Được nghỉ lễ', bu: 'Được nghỉ bù', tuan: 'Nghỉ cuối tuần', them: 'Được nghỉ (hoán đổi)' };
+
+                    if (item) {
+                        return { type: 'off', text: `${labels[item.days[iso]]} · ${item.name}`, break: item };
+                    }
+
+                    const makeUp = this.allBreaks.find((entry) => entry.makeUpOn === iso);
+                    if (makeUp) {
+                        return { type: 'makeup', text: `Đi làm bù cho ${makeUp.name}`, break: makeUp };
+                    }
+
+                    const weekday = this.parse(iso).getUTCDay();
+
+                    return weekday === 0 || weekday === 6 ? { type: 'weekend', text: 'Cuối tuần', break: null } : { type: 'work', text: 'Ngày đi làm bình thường', break: null };
+                },
+                get breakList() {
+                    let nextFound = false;
+                    const format = (iso) => `${['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][this.parse(iso).getUTCDay()]} ${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
+
+                    return this.allBreaks.filter((item) => item.year === this.year).sort((a, b) => a.start.localeCompare(b.start)).map((item) => {
+                        const daysLeft = Math.round((this.parse(item.start) - this.parse(this.today)) / 86400000);
+                        const ongoing = item.start <= this.today && item.end >= this.today;
+                        let badge = '';
+
+                        if (ongoing) {
+                            badge = 'Đang nghỉ';
+                        } else if (daysLeft > 0 && ! nextFound) {
+                            nextFound = true;
+                            badge = `Còn ${daysLeft} ngày`;
+                        }
+
+                        const extra = Object.entries(item.days).filter(([, reason]) => reason === 'bu' || reason === 'them')
+                            .map(([iso, reason]) => `${reason === 'bu' ? 'nghỉ bù' : 'nghỉ thêm'} ${iso.slice(8, 10)}/${iso.slice(5, 7)}`).join(', ');
+
+                        return {
+                            ...item,
+                            badge,
+                            past: item.end < this.today,
+                            range: `${format(item.start)} – ${format(item.end)}/${item.end.slice(0, 4)}`,
+                            extra: extra ? `Gồm ${extra}` : '',
+                            makeUp: item.makeUpOn ? `Đi làm bù ${format(item.makeUpOn)}` : '',
+                            source: item.source ? `Nguồn: ${item.source}` : '',
+                        };
+                    });
                 },
                 yearName(lunarYear) {
                     return `${this.dict.can[(lunarYear + 6) % 10]} ${this.dict.chi[(lunarYear + 8) % 12]}`;

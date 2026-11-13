@@ -15,6 +15,8 @@ enum AdminAction: string
     case Unlock = 'unlock';
     case SendPasswordReset = 'send_password_reset';
     case ChangeRole = 'change_role';
+    case SaveHolidayBreak = 'save_holiday_break';
+    case DeleteHolidayBreak = 'delete_holiday_break';
 
     /**
      * Nhãn tiếng Việt để hiển thị.
@@ -28,6 +30,8 @@ enum AdminAction: string
             self::Unlock => 'Mở khóa tài khoản',
             self::SendPasswordReset => 'Gửi email đặt lại mật khẩu',
             self::ChangeRole => 'Đổi vai trò',
+            self::SaveHolidayBreak => 'Lưu lịch nghỉ lễ chính thức',
+            self::DeleteHolidayBreak => 'Xóa lịch nghỉ lễ chính thức',
         };
     }
 }

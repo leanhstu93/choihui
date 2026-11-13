@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace App\Domain;
 
+use App\Enums\HolidayBreakKind;
 use DateTimeImmutable;
 
 /**
  * Ngày lễ trong năm ở Việt Nam, theo dương lịch và âm lịch. PHP thuần.
  *
- * $dayOff là ngày nghỉ lễ theo Bộ luật Lao động; lịch nghỉ Tết cụ thể do Chính phủ công bố hằng năm,
+ * $dayOff là ngày nghỉ lễ theo Bộ luật Lao động (và 24/11 từ 2026); lịch nghỉ Tết cụ thể do Chính phủ công bố hằng năm,
  * ở đây chỉ đánh dấu giao thừa và mùng 1 tới mùng 3.
  */
 final class VietnamHolidays
@@ -60,6 +61,11 @@ final class VietnamHolidays
 
         foreach (self::SOLAR as [$day, $month, $name, $icon, $dayOff, $about]) {
             $holidays[] = ['date' => new DateTimeImmutable(sprintf('%04d-%02d-%02d', $year, $month, $day)), 'name' => $name, 'icon' => $icon, 'dayOff' => $dayOff, 'lunar' => null, 'about' => $about];
+        }
+
+        // Nghị quyết 28/2026/QH16: 24/11 hằng năm là Ngày Văn hóa Việt Nam, người lao động được nghỉ.
+        if ($year >= HolidayBreakKind::VanHoa->sinceYear()) {
+            $holidays[] = ['date' => new DateTimeImmutable("{$year}-11-24"), 'name' => 'Ngày Văn hóa Việt Nam', 'icon' => '🎭', 'dayOff' => true, 'lunar' => null, 'about' => 'Ngày tôn vinh văn hóa Việt Nam. Từ năm 2026 người lao động được nghỉ làm, hưởng nguyên lương.'];
         }
 
         // Năm dương $year chứa cuối năm âm $year - 1 và phần lớn năm âm $year.

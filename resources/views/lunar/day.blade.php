@@ -9,6 +9,13 @@
     $holidayNames = implode(', ', array_column($holidays, 'name'));
     $description = "{$weekday}, {$solar} dương lịch là ngày {$lunarText} âm lịch, ngày {$info->dayName()}, tháng {$info->monthName()}, năm {$info->yearName()}."
         .($holidayNames !== '' ? " {$holidayNames}." : '').' Tiết '.$info->solarTermName().', '.($info->isGoodDay() ? 'ngày hoàng đạo' : 'ngày hắc đạo').', giờ hoàng đạo: '.implode(', ', $info->luckyHourLabels()).'.';
+    /** @var \App\Domain\HolidayBreak|null $workBreak */
+    $workText = match (true) {
+        $workBreak !== null => 'Ngày này được nghỉ làm: '.mb_strtolower(\App\Domain\HolidayBreak::dayLabel($workBreak->days[$date->format('Y-m-d')])).' '.$workBreak->kind->label().' ('.($workBreak->isOfficial ? 'lịch chính thức' : 'lịch dự kiến').', '.$workBreak->start->format('d/m').' – '.$workBreak->end->format('d/m/Y').').',
+        $makeUpFor !== null => 'Ngày này đi làm bù cho đợt nghỉ '.$makeUpFor->kind->label().'.',
+        \App\Domain\WorkHolidays::isWeekend($date) => 'Ngày cuối tuần.',
+        default => 'Ngày đi làm bình thường.',
+    };
     $monthNumber = (int) $date->format('n');
     $yearNumber = (int) $date->format('Y');
 @endphp
@@ -22,6 +29,7 @@
 
     <h1 class="mt-2 text-2xl font-bold sm:text-3xl">{{ $heading }}</h1>
     <p class="mt-2 max-w-3xl text-gray-700">{{ $description }}</p>
+    <p @class(['mt-2 inline-block rounded-xl px-3 py-1.5 text-sm font-semibold', 'bg-rose-100 text-rose-800' => $workBreak, 'bg-gray-100 text-gray-700' => ! $workBreak])>{{ $workBreak ? '🏖️' : '💼' }} {{ $workText }}</p>
 
     <div class="mt-4 flex flex-wrap gap-2 text-sm">
         @if ($previous)

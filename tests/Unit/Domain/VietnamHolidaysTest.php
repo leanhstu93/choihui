@@ -46,5 +46,5 @@ test('only days inside the solar year are listed, sorted by date', function () {
 test('statutory days off are marked', function () {
     $daysOff = collect(VietnamHolidays::forYear(2027))->where('dayOff', true)->pluck('name')->all();
 
-    expect($daysOff)->toBe(['Tết Dương lịch', 'Giao thừa', 'Tết Nguyên đán', 'Mùng 2 Tết', 'Mùng 3 Tết', 'Giỗ Tổ Hùng Vương', 'Giải phóng miền Nam', 'Quốc tế Lao động', 'Quốc khánh']);
+    expect($daysOff)->toBe(['Tết Dương lịch', 'Giao thừa', 'Tết Nguyên đán', 'Mùng 2 Tết', 'Mùng 3 Tết', 'Giỗ Tổ Hùng Vương', 'Giải phóng miền Nam', 'Quốc tế Lao động', 'Quốc khánh', 'Ngày Văn hóa Việt Nam']);
 });

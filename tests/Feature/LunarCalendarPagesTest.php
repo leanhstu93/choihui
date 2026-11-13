@@ -69,7 +69,7 @@ test('holidays download as an iCalendar file, for the year or a single day', fun
 
     expect($year)->toContain("BEGIN:VCALENDAR\r\n")
         ->toContain("DTSTART;VALUE=DATE:20270206\r\nDTEND;VALUE=DATE:20270207\r\nSUMMARY:Tết Nguyên đán (1/1 ÂL)")
-        ->and(substr_count($year, 'BEGIN:VEVENT'))->toBe(28);
+        ->and(substr_count($year, 'BEGIN:VEVENT'))->toBe(29);
 
     $day = $this->get(route('lunar.ics', ['year' => 2027, 'ngay' => '2027-09-02']))->assertOk()->getContent();
     expect(substr_count($day, 'BEGIN:VEVENT'))->toBe(1)->and($day)->toContain('SUMMARY:Quốc khánh');

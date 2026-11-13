@@ -9,6 +9,7 @@ use App\Http\Controllers\LunarCalendarController;
 use App\Http\Controllers\RepairPhotoController;
 use App\Livewire\Admin\Dashboard as AdminDashboard;
 use App\Livewire\Admin\GroupShow as AdminGroupShow;
+use App\Livewire\Admin\HolidayIndex as AdminHolidayIndex;
 use App\Livewire\Admin\LogIndex as AdminLogIndex;
 use App\Livewire\Admin\UserIndex as AdminUserIndex;
 use App\Livewire\Admin\UserShow as AdminUserShow;
@@ -109,6 +110,7 @@ Route::middleware('auth')->group(function () {
             Route::get('users/{user}', AdminUserShow::class)->name('users.show');
             Route::get('groups/{groupId}', AdminGroupShow::class)->name('groups.show');
             Route::get('logs', AdminLogIndex::class)->name('logs');
+            Route::get('nghi-le', AdminHolidayIndex::class)->name('holidays');
         });
 
         // Sổ vàng (document/06-vang.md): chung cho cả hai vai trò.

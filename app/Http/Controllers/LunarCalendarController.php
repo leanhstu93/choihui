@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Domain\HolidayBreak;
 use App\Domain\LunarDayInfo;
 use App\Domain\VietnamHolidays;
+use App\Queries\HolidaySchedule;
 use App\Queries\YearCalendar;
 use Carbon\CarbonImmutable;
 use DateTimeImmutable;
@@ -20,7 +22,7 @@ use Illuminate\View\View;
  */
 final class LunarCalendarController
 {
-    public function __construct(private YearCalendar $calendar) {}
+    public function __construct(private YearCalendar $calendar, private HolidaySchedule $schedule) {}
 
     public function today(): View
     {
@@ -61,6 +63,7 @@ final class LunarCalendarController
 
         return view('lunar.year', [
             'year' => $year,
+            'breaks' => $this->schedule->forYear($year),
             'holidays' => VietnamHolidays::forYear($year),
             'calendar' => $this->calendar->forYear($year),
             'today' => CarbonImmutable::today(),
@@ -71,7 +74,7 @@ final class LunarCalendarController
     {
         abort_unless(YearCalendar::supports($year), 404);
 
-        return response()->json($this->calendar->forYear($year))->header('Cache-Control', 'public, max-age=86400');
+        return response()->json($this->calendar->forYear($year))->header('Cache-Control', 'public, max-age=3600');
     }
 
     /**
@@ -113,8 +116,11 @@ final class LunarCalendarController
     private function dayView(DateTimeImmutable $date, bool $isToday): View
     {
         $year = (int) $date->format('Y');
+        $breaks = $this->schedule->overlapping($year);
 
         return view('lunar.day', [
+            'workBreak' => collect($breaks)->first(fn (HolidayBreak $break): bool => $break->covers($date)),
+            'makeUpFor' => collect($breaks)->first(fn (HolidayBreak $break): bool => $break->makeUpOn?->format('Y-m-d') === $date->format('Y-m-d')),
             'info' => LunarDayInfo::of($date),
             'holidays' => VietnamHolidays::on($date),
             'isToday' => $isToday,

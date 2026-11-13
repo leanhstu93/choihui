@@ -31,6 +31,31 @@
         </div>
     </section>
 
+    {{-- Lịch nghỉ lễ (chính thức hoặc dự kiến) --}}
+    <section class="mt-8 rounded-3xl bg-white p-4 shadow-sm sm:p-6">
+        <h2 class="text-lg font-bold">Lịch nghỉ lễ năm {{ $year }}</h2>
+        <p class="mt-1 text-sm text-gray-500">Theo lịch cán bộ, công chức (nghỉ thứ Bảy, Chủ nhật). Dự kiến là tự tính theo Bộ luật Lao động, sẽ cập nhật khi có thông báo chính thức. Công ty có thể có lịch riêng.</p>
+        <ul class="mt-3 divide-y divide-gray-100">
+            @foreach ($breaks as $break)
+                <li class="py-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <h3 class="font-semibold">{{ $break->kind->label() }}</h3>
+                        <span class="rounded-full px-2 py-0.5 text-xs font-semibold {{ $break->isOfficial ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800' }}">{{ $break->isOfficial ? 'Chính thức' : 'Dự kiến' }}</span>
+                    </div>
+                    <p class="text-sm text-gray-700">
+                        {{ $weekdays[(int) $break->start->format('w')] }}, {{ $break->start->format('d/m/Y') }} – {{ $weekdays[(int) $break->end->format('w')] }}, {{ $break->end->format('d/m/Y') }} · <b>{{ $break->length() }} ngày</b>
+                    </p>
+                    @if ($break->makeUpOn)
+                        <p class="text-xs font-semibold text-gray-700">Đi làm bù {{ $weekdays[(int) $break->makeUpOn->format('w')] }}, {{ $break->makeUpOn->format('d/m/Y') }}</p>
+                    @endif
+                    @if ($break->source)
+                        <p class="text-xs text-gray-400">Nguồn: {{ $break->source }}</p>
+                    @endif
+                </li>
+            @endforeach
+        </ul>
+    </section>
+
     {{-- Ngày lễ trong năm --}}
     <section class="mt-8 rounded-3xl bg-white p-4 shadow-sm sm:p-6">
         <div class="flex flex-wrap items-center justify-between gap-2">
@@ -44,8 +69,8 @@
                     <div class="min-w-0">
                         <h3 class="font-semibold">
                             <a href="{{ route('lunar.day', $holiday['date']->format('Y-m-d')) }}" class="hover:text-emerald-700">{{ $holiday['name'] }}</a>
-                            @if ($holiday['dayOff'])
-                                <span class="ml-1 rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-700">Nghỉ lễ</span>
+                            @if (collect($breaks)->contains(fn ($break) => $break->covers($holiday['date'])))
+                                <span class="ml-1 rounded-full bg-rose-100 px-2 py-0.5 text-xs text-rose-700">Nghỉ làm</span>
                             @endif
                         </h3>
                         <div class="text-sm text-gray-500">{{ $weekdays[(int) $holiday['date']->format('w')] }}, {{ $holiday['date']->format('d/m/Y') }}@if ($holiday['lunar']) · {{ $holiday['lunar']->label() }}@endif</div>
