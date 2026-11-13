@@ -19,12 +19,17 @@ test('both home pages show the install app card', function (Closure $makeUser, s
     'host' => [fn () => User::factory()->host()->create(), 'host.dashboard'],
 ]);
 
-test('the app is installable: manifest and a service worker without caching', function () {
+test('the app is installable: manifest and a service worker that never serves pages from cache', function () {
     $manifest = json_decode((string) file_get_contents(public_path('manifest.webmanifest')), true);
     $serviceWorker = (string) file_get_contents(public_path('sw.js'));
 
     expect($manifest)->toMatchArray(['display' => 'standalone', 'start_url' => '/tong-tai-san'])
         ->and(collect($manifest['icons'])->pluck('sizes')->all())->toContain('192x192', '512x512')
         ->and($serviceWorker)->toContain("addEventListener('fetch'")
-        ->and($serviceWorker)->not->toContain('caches.');
+        // Không trả trang từ cache (tránh hiện số tiền cũ). Cache chỉ dùng cất tạm file "Chia sẻ" vào /gui-file.
+        ->and($serviceWorker)->not->toContain('caches.match')
+        ->and($serviceWorker)->not->toContain('cache.match')
+        ->and($serviceWorker)->toContain("const SHARE_CACHE = 'gui-file-chia-se'")
+        ->and(substr_count($serviceWorker, 'caches.open('))->toBe(1)
+        ->and($serviceWorker)->toContain('caches.open(SHARE_CACHE)');
 });
