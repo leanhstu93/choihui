@@ -147,6 +147,7 @@
                 <div class="min-w-0 flex-1">
                     <div class="font-semibold" x-text="{ connected: `Đã kết nối với ${peer?.name ?? 'máy kia'}`, unstable: 'Kết nối chập chờn, đang thử giữ…', reconnecting: 'Mất kết nối, đang nối lại…' }[phase]"></div>
                     <div class="text-xs text-gray-500"><span x-text="peer?.device ?? ''"></span> · <span x-text="kindLabel"></span></div>
+                    <div class="mt-1 text-xs text-gray-500">Máy này: <b class="text-gray-700" x-text="me.name"></b> · <span x-text="me.device"></span></div>
                 </div>
                 <span x-show="phase !== 'reconnecting'" class="rounded-full px-3 py-1 text-xs font-semibold" :class="kind === 'relay' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'" x-text="kind === 'relay' ? 'Qua trung chuyển' : (kind ? 'Trực tiếp' : '…')"></span>
                 <button type="button" @click="disconnect()" class="rounded-full border border-gray-300 px-3 py-1 text-xs font-semibold text-gray-600 hover:bg-gray-50">Ngắt</button>
