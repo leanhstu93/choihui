@@ -45,6 +45,7 @@ use App\Livewire\Reports\ProfitReportPage;
 use App\Livewire\Rounds\RoundShow;
 use App\Livewire\Settings\SettingsPage;
 use App\Livewire\Settings\UnlockPage;
+use App\Livewire\Tasks\TaskBoard;
 use App\Queries\LunarDateLookup;
 use App\Queries\YearCalendar;
 use Carbon\CarbonImmutable;
@@ -71,7 +72,7 @@ Route::controller(LunarCalendarController::class)->name('lunar.')->group(functio
 });
 
 // SEO: sinh theo APP_URL để đổi tên miền không phải sửa file.
-Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /tong-tai-san\nDisallow: /vang\nDisallow: /sua-chua\nDisallow: /gia-dinh\nDisallow: /quan-tri\nDisallow: /lich/\nSitemap: ".url('sitemap.xml')."\n")
+Route::get('robots.txt', fn () => response("User-agent: *\nDisallow: /chu-hui\nDisallow: /dashboard\nDisallow: /tong-tai-san\nDisallow: /vang\nDisallow: /sua-chua\nDisallow: /gia-dinh\nDisallow: /viec-can-lam\nDisallow: /quan-tri\nDisallow: /lich/\nSitemap: ".url('sitemap.xml')."\n")
     ->header('Content-Type', 'text/plain; charset=UTF-8'))->name('robots');
 Route::view('chinh-sach', 'privacy')->name('privacy');
 Route::get('sitemap.xml', fn () => response()->view('sitemap', ['year' => CarbonImmutable::today()->year])->header('Content-Type', 'application/xml; charset=UTF-8'))->name('sitemap');
@@ -154,6 +155,13 @@ Route::middleware('auth')->group(function () {
                 Route::get('{healthPerson}/sua', HealthPersonForm::class)->name('people.edit');
                 Route::get('{healthPerson}/them-lan-kham', HealthRecordForm::class)->name('records.create');
             });
+        });
+
+        // Sổ việc cần làm (document/10-viec-can-lam.md): chung cho cả hai vai trò.
+        Route::middleware('area:viec')->prefix('viec-can-lam')->name('tasks.')->group(function () {
+            Route::get('/', TaskBoard::class)->name('index');
+            Route::get('tat-ca', TaskBoard::class)->name('all');
+            Route::get('da-xong', TaskBoard::class)->name('done');
         });
 
         Route::get('settings', SettingsPage::class)->name('settings');

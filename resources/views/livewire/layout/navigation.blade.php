@@ -1,10 +1,17 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use Livewire\Attributes\On;
 use Livewire\Volt\Component;
 
 new class extends Component
 {
+    /**
+     * Sổ việc vừa thay đổi: vẽ lại để cập nhật số trên tab "Việc" (document/10-viec-can-lam.md VL-11).
+     */
+    #[On('tasks-changed')]
+    public function refreshTaskBadge(): void {}
+
     /**
      * Log the current user out of the application.
      */
@@ -26,14 +33,15 @@ new class extends Component
                 ['area' => \App\Http\Middleware\RememberAppArea::GOLD, 'route' => 'gold.index', 'label' => 'Vàng'],
                 ['area' => \App\Http\Middleware\RememberAppArea::REPAIR, 'route' => 'repairs.index', 'label' => 'Sửa chữa'],
                 ['area' => \App\Http\Middleware\RememberAppArea::FAMILY, 'route' => 'family.index', 'label' => 'Gia đình'],
+                ['area' => \App\Http\Middleware\RememberAppArea::TASKS, 'route' => 'tasks.index', 'label' => 'Việc', 'badge' => app(\App\Queries\TaskAgenda::class)->dueCount(auth()->user(), now()->toImmutable())],
             ];
         @endphp
-        {{-- Năm sổ không vừa màn 360px: thanh cuộn ngang, sổ đang mở tự cuộn vào khung. --}}
+        {{-- Sáu sổ không vừa màn 360px: thanh cuộn ngang, sổ đang mở tự cuộn vào khung. --}}
         <nav class="flex min-w-0 overflow-x-auto rounded-lg bg-emerald-800 p-0.5 text-sm [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Chọn sổ"
-             x-data x-init="$el.querySelector('[aria-current]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })">
+             x-data x-init="requestAnimationFrame(() => { const tab = $el.querySelector('[aria-current]'); if (tab && tab.offsetLeft + tab.offsetWidth > $el.scrollLeft + $el.clientWidth) { $el.scrollLeft = tab.offsetLeft + tab.offsetWidth - $el.clientWidth + 4 } else if (tab && tab.offsetLeft < $el.scrollLeft) { $el.scrollLeft = tab.offsetLeft - 4 } })">
             @foreach ($tabs as $tab)
                 <a href="{{ route($tab['route']) }}" wire:navigate @if ($area === $tab['area']) aria-current="page" @endif
-                   @class(['shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 sm:px-3', 'bg-white text-emerald-800 font-semibold' => $area === $tab['area'], 'text-emerald-50' => $area !== $tab['area']])>{{ $tab['label'] }}</a>
+                   @class(['shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 sm:px-3', 'bg-white text-emerald-800 font-semibold' => $area === $tab['area'], 'text-emerald-50' => $area !== $tab['area']])>{{ $tab['label'] }}@if (($tab['badge'] ?? 0) > 0)<span class="ml-1 inline-flex min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-bold leading-4 text-amber-950" aria-label="{{ $tab['badge'] }} việc cần làm hôm nay">{{ $tab['badge'] > 99 ? '99+' : $tab['badge'] }}</span>@endif</a>
             @endforeach
         </nav>
 

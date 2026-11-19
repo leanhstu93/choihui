@@ -1,4 +1,5 @@
 import { toBlob } from 'html-to-image';
+import './tasks';
 
 /**
  * Ô nhập tiền: hiển thị 1.000.000 khi gõ, đồng bộ số nguyên (đồng) với Livewire.

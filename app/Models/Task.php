@@ -47,6 +47,8 @@ class Task extends Model
 
     public const int KEEP_DONE_DAYS = 90;
 
+    public const array WEEKDAYS = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+
     /**
      * @var array<string, mixed>
      */
@@ -142,5 +144,64 @@ class Task extends Model
             $this->repeat_weekdays,
             $this->repeat_day,
         ));
+    }
+
+    /**
+     * Nhãn hạn có màu (VL-07): đỏ "Trễ 2 ngày", cam "Hôm nay 08:00", xanh "Mai", xám "Thứ 6, 27/11".
+     *
+     * @return array{label: string, tone: 'late'|'today'|'soon'|'later'}|null
+     */
+    public function dueBadge(CarbonImmutable $today): ?array
+    {
+        if ($this->due_on === null) {
+            return null;
+        }
+
+        $days = (int) $today->startOfDay()->diffInDays($this->due_on, false);
+        $time = $this->due_time === null ? '' : ' '.$this->due_time;
+
+        return match (true) {
+            $days < 0 => ['label' => 'Trễ '.-$days.' ngày', 'tone' => 'late'],
+            $days === 0 => ['label' => 'Hôm nay'.$time, 'tone' => 'today'],
+            $days === 1 => ['label' => 'Mai'.$time, 'tone' => 'soon'],
+            $days < 7 => ['label' => self::WEEKDAYS[$this->due_on->dayOfWeek].', '.$this->due_on->format('d/m').$time, 'tone' => 'later'],
+            $this->due_on->year === $today->year => ['label' => $this->due_on->format('d/m').$time, 'tone' => 'later'],
+            default => ['label' => $this->due_on->format('d/m/Y').$time, 'tone' => 'later'],
+        };
+    }
+
+    /**
+     * "Thứ 2 và thứ 5", "Rằm", "Ngày 31"… mô tả ngắn kiểu lặp, cho dòng việc và form.
+     */
+    public function recurrenceLabel(): ?string
+    {
+        return match ($this->recurrence) {
+            TaskRepeat::None => null,
+            TaskRepeat::Daily => 'Hằng ngày',
+            TaskRepeat::Weekly => $this->repeat_weekdays === TaskRecurrence::ALL_WEEKDAYS ? 'Hằng ngày' : 'Hằng tuần: '.self::weekdaysLabel($this->repeat_weekdays),
+            TaskRepeat::Monthly => 'Ngày '.$this->repeat_day.' hằng tháng',
+            TaskRepeat::MonthlyLunar => match ($this->repeat_day) {
+                15 => 'Rằm hằng tháng (âm)',
+                1 => 'Mùng 1 hằng tháng (âm)',
+                default => ($this->repeat_day !== null && $this->repeat_day <= 10 ? 'Mùng ' : 'Ngày ').$this->repeat_day.' âm hằng tháng',
+            },
+            TaskRepeat::Yearly => 'Hằng năm, '.$this->due_on?->format('d/m'),
+        };
+    }
+
+    /**
+     * Bitmask thứ (bit 0 = thứ 2) → "T2, T5, CN".
+     */
+    public static function weekdaysLabel(int $mask): string
+    {
+        $labels = [];
+
+        for ($iso = 1; $iso <= 7; $iso++) {
+            if (($mask & (1 << ($iso - 1))) !== 0) {
+                $labels[] = $iso === 7 ? 'CN' : 'T'.($iso + 1);
+            }
+        }
+
+        return implode(', ', $labels);
     }
 }
