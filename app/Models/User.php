@@ -67,6 +67,7 @@ class User extends Authenticatable
             'pin_hash' => 'hashed',
             'last_reminded_on' => 'date',
             'family_reminded_on' => 'date',
+            'tasks_in_morning_email' => 'boolean',
             'role' => UserRole::class,
             'locked_at' => 'datetime',
             'last_seen_at' => 'datetime',
