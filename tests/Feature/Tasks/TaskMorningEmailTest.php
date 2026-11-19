@@ -52,6 +52,16 @@ test('tasks share the email with family reminders', function () {
     Mail::assertSent(FamilyReminderMail::class, fn (FamilyReminderMail $mail) => $mail->envelope()->subject === 'Nhắc: Sinh nhật mẹ (còn 3 ngày) và 1 việc khác');
 });
 
+test('an account that opted out still gets family reminders, without tasks', function () {
+    $user = User::factory()->create(['tasks_in_morning_email' => false]);
+    FamilyEvent::factory()->for($user)->create(['day' => 21, 'month' => 11]);
+    Task::factory()->for($user)->due('2026-11-18')->create();
+
+    $this->artisan('family:send-reminders', ['--date' => '2026-11-18'])->assertSuccessful();
+
+    Mail::assertSent(FamilyReminderMail::class, fn (FamilyReminderMail $mail) => $mail->events !== [] && $mail->tasks === []);
+});
+
 test('the morning email lists at most 10 tasks', function () {
     $user = User::factory()->create();
     Task::factory()->count(12)->for($user)->due('2026-11-18')->create();

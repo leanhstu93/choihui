@@ -12,10 +12,10 @@
         <main class="mx-auto max-w-2xl space-y-6 px-4 py-10 leading-relaxed text-gray-700 [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-gray-900 [&_li]:ml-5 [&_li]:list-disc">
             <div>
                 <h1 class="text-3xl font-bold text-gray-900">Chính sách bảo mật</h1>
-                <p class="mt-1 text-sm text-gray-500">Cập nhật ngày 23/10/2026</p>
+                <p class="mt-1 text-sm text-gray-500">Cập nhật ngày 19/11/2026</p>
             </div>
 
-            <p>{{ config('app.name') }} là công cụ ghi chép cá nhân: tài sản, hụi, vàng, sửa chữa, ngày nhớ và sức khỏe. Chúng tôi không giữ tiền, không tổ chức hụi và không bán dữ liệu của bạn.</p>
+            <p>{{ config('app.name') }} là công cụ ghi chép cá nhân: tài sản, hụi, vàng, sửa chữa, ngày nhớ, sức khỏe và việc cần làm. Chúng tôi không giữ tiền, không tổ chức hụi và không bán dữ liệu của bạn.</p>
 
             <section>
                 <h2>Dữ liệu chúng tôi lưu</h2>
@@ -25,6 +25,7 @@
                     <li><strong>Sổ vàng:</strong> các món vàng, giá mua, giá bán, tiệm, ghi chú và ảnh bạn tự nhập. Ảnh được lưu riêng tư, chỉ tài khoản của bạn xem được, và bị xóa khi bạn xóa món vàng hoặc tài khoản.</li>
                     <li><strong>Sổ sửa chữa:</strong> các món đồ, lần sửa, số tiền, nơi sửa, ghi chú và ảnh hóa đơn bạn tự nhập. Ảnh được lưu riêng tư, chỉ tài khoản của bạn xem được, và bị xóa khi bạn xóa lần sửa, món đồ hoặc tài khoản.</li>
                     <li><strong>Sổ gia đình:</strong> các ngày nhớ (giỗ, sinh nhật, kỷ niệm) và sổ sức khỏe: tên, năm sinh của người thân, các lần khám, tiêm, xét nghiệm, chi phí, ghi chú và ảnh đơn thuốc, kết quả bạn tự nhập. Đây là thông tin nhạy cảm, quản trị viên không xem được sổ này. Ảnh được lưu riêng tư, chỉ tài khoản của bạn xem được, và bị xóa khi bạn xóa lần khám, người hoặc tài khoản.</li>
+                    <li><strong>Sổ việc cần làm:</strong> tên việc, hạn, giờ, cách lặp lại, các bước nhỏ và ghi chú bạn tự nhập. Việc đã xong quá 90 ngày được tự động xóa; toàn bộ sổ bị xóa khi bạn xóa tài khoản. Nếu bạn bật, email lúc 07:00 sẽ liệt kê các việc quá hạn và việc hôm nay.</li>
                     <li><strong>Tổng tài sản:</strong> số tổng từng tháng, tính từ các sổ trên.</li>
                     <li><strong>Cài đặt:</strong> số ngày nhắc hạn, mã PIN khóa màn hình (đã mã hóa).</li>
                 </ul>

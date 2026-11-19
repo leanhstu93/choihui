@@ -17,6 +17,8 @@ use App\Models\MySlot;
 use App\Models\NetWorthSnapshot;
 use App\Models\RepairItem;
 use App\Models\RepairRecord;
+use App\Models\Task;
+use App\Models\TaskStep;
 use App\Models\User;
 
 /**
@@ -96,6 +98,7 @@ final class UserBackup
                 ->all(),
             'repairs' => $this->exportRepairs($user),
             'family' => $this->exportFamily($user),
+            'tasks' => $this->exportTasks($user),
         ];
     }
 
@@ -223,5 +226,35 @@ final class UserBackup
                 ])->values()->all(),
             ])->values()->all(),
         ];
+    }
+
+    /**
+     * Sổ việc cần làm (document/10-viec-can-lam.md V15). Liên kết hoàn tác (spawned_task_id) không xuất.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function exportTasks(User $user): array
+    {
+        return Task::query()
+            ->withoutGlobalScope(Task::OWNER_SCOPE)
+            ->where('user_id', $user->id)
+            ->with(['steps' => fn ($query) => $query->withoutGlobalScope(TaskStep::OWNER_SCOPE)])
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Task $task) => [
+                'title' => $task->title,
+                'note' => $task->note,
+                'due_on' => $task->due_on?->toDateString(),
+                'due_time' => $task->due_time,
+                'important' => $task->important,
+                'recurrence' => $task->recurrence->value,
+                'repeat_weekdays' => $task->repeat_weekdays,
+                'repeat_day' => $task->repeat_day,
+                'completed_at' => $task->completed_at?->format('Y-m-d H:i:s'),
+                'steps' => $task->steps->map(fn (TaskStep $step) => ['title' => $step->title, 'done' => $step->done])->values()->all(),
+            ])
+            ->values()
+            ->all();
     }
 }

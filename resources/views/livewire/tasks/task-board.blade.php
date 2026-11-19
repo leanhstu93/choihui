@@ -42,6 +42,12 @@
     {{-- Đầu trang --}}
     @if ($isToday)
         <section class="flex items-center gap-4 rounded-2xl bg-gradient-to-br from-emerald-700 to-emerald-800 p-4 text-white shadow-sm">
+            @if ($total === 0)
+                <div class="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl bg-white/15">
+                    <span class="text-[10px] font-semibold uppercase tracking-wide text-emerald-100">Th{{ $today->month }}</span>
+                    <span class="text-2xl font-bold leading-none">{{ $today->day }}</span>
+                </div>
+            @else
             <div class="relative h-16 w-16 shrink-0" role="img" aria-label="Đã xong {{ $doneToday }} trên {{ $total }} việc hôm nay">
                 <svg class="h-16 w-16 -rotate-90" viewBox="0 0 36 36" aria-hidden="true">
                     <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" stroke-opacity=".2" stroke-width="3.5" />
@@ -50,6 +56,7 @@
                 </svg>
                 <span class="absolute inset-0 flex items-center justify-center text-sm font-bold">{{ $doneToday }}/{{ $total }}</span>
             </div>
+            @endif
             <div class="min-w-0">
                 <div class="text-sm text-emerald-100">{{ $greeting }}, {{ $firstName }}</div>
                 <h1 class="text-lg font-semibold leading-tight">{{ $weekdayName($today) }}, {{ $today->format('d/m/Y') }}</h1>

@@ -14,6 +14,7 @@ use App\Enums\HealthRecordKind;
 use App\Enums\HuiFrequency;
 use App\Enums\HuiGroupStatus;
 use App\Enums\HuiGroupType;
+use App\Enums\TaskRepeat;
 use App\Enums\WinnerType;
 use App\Exceptions\HuiActionException;
 use App\Models\CashEntry;
@@ -32,6 +33,8 @@ use App\Models\NetWorthSnapshot;
 use App\Models\RepairItem;
 use App\Models\RepairRecord;
 use App\Models\RepairRecordPhoto;
+use App\Models\Task;
+use App\Models\TaskStep;
 use App\Models\User;
 use App\Queries\UserBackup;
 use Illuminate\Support\Facades\Auth;
@@ -46,7 +49,7 @@ use Illuminate\Validation\Rule;
  * Sổ vàng chỉ bị thay khi file có khóa gold; file cũ không có khóa này thì giữ nguyên
  * (document/06-vang.md V11). Lịch sử tổng tài sản cũng vậy với khóa net_worth
  * (document/07-tong-tai-san.md T8) và sổ sửa chữa với khóa repairs (document/08-sua-chua.md S7), sổ gia đình với khóa family
- * (document/09-gia-dinh.md G12).
+ * (document/09-gia-dinh.md G12), sổ việc với khóa tasks (document/10-viec-can-lam.md V15).
  *
  * Kiểm tra cả file trước khi xóa gì; lỗi thì dữ liệu cũ giữ nguyên. user_id luôn là người
  * dùng được truyền vào, không bao giờ lấy từ file.
@@ -55,7 +58,7 @@ final class RestoreBackup
 {
     /**
      * @param  array<mixed>  $data
-     * @return array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int}
+     * @return array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int, tasks: int}
      *
      * @throws HuiActionException khi file không hợp lệ.
      */
@@ -89,12 +92,18 @@ final class RestoreBackup
             $this->validateFamily($family);
         }
 
+        $tasks = $data['tasks'] ?? null;
+
+        if ($tasks !== null) {
+            $this->validateTasks($tasks);
+        }
+
         $orphanedPhotos = [];
 
-        $stats = DB::transaction(function () use ($user, $data, $gold, $repairs, $family, &$orphanedPhotos): array {
+        $stats = DB::transaction(function () use ($user, $data, $gold, $repairs, $family, $tasks, &$orphanedPhotos): array {
             $this->deleteExistingData($user);
 
-            $stats = ['groups' => 0, 'rounds' => 0, 'entries' => 0, 'gold_items' => 0, 'repair_items' => 0, 'family_events' => 0, 'health_people' => 0];
+            $stats = ['groups' => 0, 'rounds' => 0, 'entries' => 0, 'gold_items' => 0, 'repair_items' => 0, 'family_events' => 0, 'health_people' => 0, 'tasks' => 0];
 
             foreach ($data['groups'] as $groupData) {
                 $this->restoreGroup($user, $groupData, $stats);
@@ -113,6 +122,10 @@ final class RestoreBackup
             if ($family !== null) {
                 $orphanedPhotos = [...$orphanedPhotos, ...$this->deleteExistingFamily($user)];
                 $this->restoreFamily($user, $family, $stats);
+            }
+
+            if ($tasks !== null) {
+                $this->restoreTasks($user, $tasks, $stats);
             }
 
             if (isset($data['net_worth'])) {
@@ -229,6 +242,19 @@ final class RestoreBackup
             'family.people.*.records.*.amount' => ['nullable', 'integer', 'min:0', 'max:1000000000000'],
             'family.people.*.records.*.follow_up_on' => ['nullable', 'date_format:Y-m-d'],
             'family.people.*.records.*.note' => ['nullable', 'string', 'max:2000'],
+            'tasks' => ['sometimes', 'array', 'max:20000'],
+            'tasks.*.title' => ['required', 'string', 'max:200'],
+            'tasks.*.note' => ['nullable', 'string', 'max:2000'],
+            'tasks.*.due_on' => ['nullable', 'date_format:Y-m-d'],
+            'tasks.*.due_time' => ['nullable', 'date_format:H:i'],
+            'tasks.*.important' => ['required', 'boolean'],
+            'tasks.*.recurrence' => ['required', Rule::enum(TaskRepeat::class)],
+            'tasks.*.repeat_weekdays' => ['required', 'integer', 'min:0', 'max:127'],
+            'tasks.*.repeat_day' => ['nullable', 'integer', 'min:1', 'max:31'],
+            'tasks.*.completed_at' => ['nullable', 'date_format:Y-m-d H:i:s'],
+            'tasks.*.steps' => ['present', 'array', 'max:'.Task::MAX_STEPS],
+            'tasks.*.steps.*.title' => ['required', 'string', 'max:200'],
+            'tasks.*.steps.*.done' => ['required', 'boolean'],
         ]);
 
         if ($validator->fails()) {
@@ -359,6 +385,30 @@ final class RestoreBackup
         }
     }
 
+    /**
+     * Ràng buộc giống StoreTaskRequest và CHECK trong database.
+     *
+     * @param  list<array<string, mixed>>  $tasks
+     */
+    private function validateTasks(array $tasks): void
+    {
+        foreach ($tasks as $index => $task) {
+            $position = 'Việc thứ '.($index + 1).': ';
+
+            if ($task['due_on'] === null && ($task['due_time'] ?? null) !== null) {
+                throw new HuiActionException($position.'có giờ mà không có ngày.');
+            }
+
+            if ($task['due_on'] === null && $task['recurrence'] !== TaskRepeat::None->value) {
+                throw new HuiActionException($position.'việc lặp lại phải có ngày.');
+            }
+
+            if ($task['recurrence'] === TaskRepeat::Weekly->value && $task['repeat_weekdays'] === 0) {
+                throw new HuiActionException($position.'lặp hằng tuần nhưng chưa chọn thứ nào.');
+            }
+        }
+    }
+
     private function deleteExistingData(User $user): void
     {
         foreach ([CashEntry::class, HuiRound::class, MySlot::class, HuiGroup::class] as $modelClass) {
@@ -406,7 +456,7 @@ final class RestoreBackup
 
     /**
      * @param  array<string, mixed>  $repairs
-     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int}  $stats
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int, tasks: int}  $stats
      */
     private function restoreRepairs(User $user, array $repairs, array &$stats): void
     {
@@ -445,7 +495,7 @@ final class RestoreBackup
 
     /**
      * @param  array<string, mixed>  $family
-     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int}  $stats
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int, tasks: int}  $stats
      */
     private function restoreFamily(User $user, array $family, array &$stats): void
     {
@@ -471,6 +521,33 @@ final class RestoreBackup
     }
 
     /**
+     * @param  list<array<string, mixed>>  $tasks
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int, tasks: int}  $stats
+     */
+    private function restoreTasks(User $user, array $tasks, array &$stats): void
+    {
+        Task::query()->withoutGlobalScope(Task::OWNER_SCOPE)->where('user_id', $user->id)->delete();
+
+        foreach ($tasks as $taskData) {
+            $task = (new Task)->forceFill(['user_id' => $user->id] + array_intersect_key($taskData, array_flip([
+                'title', 'note', 'due_on', 'due_time', 'important', 'recurrence', 'repeat_weekdays', 'repeat_day', 'completed_at',
+            ])));
+            $task->save();
+            $stats['tasks']++;
+
+            foreach (array_values($taskData['steps']) as $position => $stepData) {
+                (new TaskStep)->forceFill([
+                    'user_id' => $user->id,
+                    'task_id' => $task->id,
+                    'title' => $stepData['title'],
+                    'done' => $stepData['done'],
+                    'position' => $position,
+                ])->save();
+            }
+        }
+    }
+
+    /**
      * @param  list<array{month: string, assets: int, debts: int}>  $snapshots
      */
     private function restoreNetWorth(User $user, array $snapshots): void
@@ -487,7 +564,7 @@ final class RestoreBackup
 
     /**
      * @param  array<string, mixed>  $gold
-     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int}  $stats
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int, tasks: int}  $stats
      */
     private function restoreGold(User $user, array $gold, array &$stats): void
     {
@@ -516,7 +593,7 @@ final class RestoreBackup
 
     /**
      * @param  array<string, mixed>  $data
-     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int}  $stats
+     * @param  array{groups: int, rounds: int, entries: int, gold_items: int, repair_items: int, family_events: int, health_people: int, tasks: int}  $stats
      */
     private function restoreGroup(User $user, array $data, array &$stats): void
     {
