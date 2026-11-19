@@ -14,6 +14,17 @@
     </section>
 
     <section class="rounded-xl bg-white p-4 shadow-sm">
+        <label class="flex cursor-pointer items-start justify-between gap-4">
+            <span>
+                <span class="block font-semibold">📝 Việc cần làm trong email buổi sáng</span>
+                <span class="mt-0.5 block text-sm text-gray-500">Lúc 07:00, gửi danh sách việc quá hạn và việc hôm nay. Không có việc thì không gửi.</span>
+            </span>
+            <input type="checkbox" wire:model.live="tasksInMorningEmail" class="peer sr-only" role="switch">
+            <span class="relative mt-1 h-6 w-11 shrink-0 rounded-full bg-gray-300 transition after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:shadow after:transition peer-checked:bg-emerald-600 peer-checked:after:translate-x-5 peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-600 peer-focus-visible:ring-offset-2" aria-hidden="true"></span>
+        </label>
+    </section>
+
+    <section class="rounded-xl bg-white p-4 shadow-sm">
         <h2 class="font-semibold">Khóa bằng mã PIN</h2>
         <p class="mt-1 text-sm text-gray-600">
             {{ $hasPin ? 'Đang bật.' : 'Đang tắt.' }} Ứng dụng tự khóa sau {{ config('hui.pin_idle_minutes') }} phút không dùng.

@@ -31,6 +31,9 @@ class SettingsPage extends Component
 
     public int $reminderDaysBefore = 3;
 
+    /** Gửi việc quá hạn / hôm nay trong email 07:00 (document/10-viec-can-lam.md V14). */
+    public bool $tasksInMorningEmail = true;
+
     public string $currentPin = '';
 
     public string $newPin = '';
@@ -45,6 +48,13 @@ class SettingsPage extends Component
     public function mount(): void
     {
         $this->reminderDaysBefore = $this->user()->reminder_days_before;
+        $this->tasksInMorningEmail = $this->user()->tasks_in_morning_email ?? true;
+    }
+
+    public function updatedTasksInMorningEmail(bool $value): void
+    {
+        $this->user()->forceFill(['tasks_in_morning_email' => $value])->save();
+        session()->flash('status', $value ? 'Sẽ gửi việc cần làm trong email 07:00 mỗi sáng.' : 'Đã tắt việc cần làm trong email buổi sáng.');
     }
 
     public function saveReminder(): void
